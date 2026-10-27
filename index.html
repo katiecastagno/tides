@@ -37,7 +37,7 @@
 html { -webkit-text-size-adjust:100%; }
 body { margin:0; background:var(--bg); color:var(--text);
   font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-.wrap { max-width:780px; margin:0 auto; padding:16px 12px 40px; }
+.wrap { max-width:920px; margin:0 auto; padding:16px 16px 40px; }
 h1 { font-size:1.5rem; margin:4px 0 14px; }
 a { color:var(--accent); }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; }
@@ -101,20 +101,39 @@ table.tides { width:100%; border-collapse:separate; border-spacing:0; table-layo
 .tides tbody tr.today td { background:var(--today); }
 .tides tbody tr:hover td { background:var(--accent-soft); }
 .tides .div { border-right:2px solid var(--border); }
-.tt { display:block; font-weight:700; }
-.th { display:block; font-size:.76rem; color:var(--muted); }
-.pill { display:inline-block; padding:2px 5px; border-radius:6px; }
+.tt { display:block; font-weight:700; white-space:nowrap; }
+.th { display:block; font-size:.76rem; color:var(--muted); white-space:nowrap; }
+.pill { display:inline-block; padding:2px 6px; border-radius:6px; }
 .pill.hl { background:var(--hl-bg); color:var(--hl-text); }
 .pill.hl .th { color:var(--hl-text); opacity:.85; }
 .dw { display:block; font-size:.72rem; color:var(--muted); font-weight:600; }
 .dd { display:block; font-weight:800; font-size:1rem; }
 tr.today .dw { color:var(--accent); }
-.sun { font-size:.82rem; }
+.sun { font-size:.85rem; white-space:nowrap; }
 .moon { font-size:1.15rem; }
-@media (max-width:480px) {
-  .tides { font-size:.8rem; }
-  .th { font-size:.68rem; }
-  .sun { font-size:.74rem; }
+.c-date { width:11%; } .c-sun { width:11%; } .c-moon { width:8%; }
+/* Phone: one combined sunrise/sunset column, no "ft" units, tighter cells,
+   and columns sized to their content so nothing overlaps. */
+.sun-one { display:none; }
+.sun-one span { display:block; }
+@media (max-width:600px) {
+  .wrap { padding:12px 8px 32px; }
+  table.tides { table-layout:auto; font-size:.8rem; }
+  .tides th { padding:7px 1px; font-size:.7rem; }
+  .tides td { padding:5px 1px; }
+  .c-date, .c-sun, .c-moon { width:auto; }
+  .pill { padding:1px 3px; }
+  .th { font-size:.7rem; }
+  .u { display:none; }
+  .sun-sep { display:none; }
+  .sun-one { display:table-cell; }
+  .sun { font-size:.72rem; }
+  .dd { font-size:.92rem; }
+  .moon { font-size:1rem; }
+}
+@media (max-width:360px) {
+  table.tides { font-size:.74rem; }
+  .th { font-size:.64rem; }
 }
 .loading, .err { padding:24px; text-align:center; color:var(--muted); }
 .err { color:var(--fall); }
@@ -412,7 +431,7 @@ async function renderNow() {
   const cell = (label, p) => !p ? '' : `
     <div>
       <div class="k">${label}</div>
-      <div class="v">${fmtLong(p.t)}${p.t.slice(0, 10) !== now.date ? ' <span class="sub">tmrw</span>' : ''}</div>
+      <div class="v">${fmtLong(p.t)}${p.t.slice(0, 10) !== now.date ? ` <span class="sub">${WD[weekday(p.t.slice(0, 10))]}</span>` : ''}</div>
       <div class="sub">${(+p.v).toFixed(1)} ft · in ${fmtDur((tsMs(p.t) - nowMs) / 60000)}</div>
     </div>`;
   el.className = 'card now ready';
@@ -452,13 +471,13 @@ async function renderMonth() {
     const mins = hmToMin(p.t.slice(11, 16));
     const daylight = mins >= sun.riseMin && mins <= sun.setMin;
     const hl = daylight && (high ? state.hiDay : state.loDay);
-    return `<td class="${cls}"><span class="pill${hl ? ' hl' : ''}"><span class="tt">${fmtShort(p.t)}</span><span class="th">${(+p.v).toFixed(1)} ft</span></span></td>`;
+    return `<td class="${cls}"><span class="pill${hl ? ' hl' : ''}"><span class="tt">${fmtShort(p.t)}</span><span class="th">${(+p.v).toFixed(1)}<span class="u"> ft</span></span></span></td>`;
   };
 
-  let html = '<table class="tides"><thead><tr><th class="div" style="width:13%">Date</th>';
+  let html = '<table class="tides"><thead><tr><th class="div c-date">Date</th>';
   if (showH) html += '<th>High 1</th><th class="div">High 2</th>';
   if (showL) html += '<th>Low 1</th><th class="div">Low 2</th>';
-  html += '<th style="width:12%">Rise</th><th class="div" style="width:12%">Set</th><th style="width:10%">Moon</th></tr></thead><tbody>';
+  html += '<th class="c-sun sun-sep">Rise</th><th class="div c-sun sun-sep">Set</th><th class="div sun-one">Sun</th><th class="c-moon">Moon</th></tr></thead><tbody>';
 
   for (let d = 1; d <= n; d++) {
     const iso = isoDate(y, m, d);
@@ -470,7 +489,9 @@ async function renderMonth() {
     html += `<td class="div"><span class="dw">${iso === today ? 'Today' : WD[weekday(iso)]}</span><span class="dd">${d}</span></td>`;
     if (showH) html += cell(hs[0], true, sun, '') + cell(hs[1], true, sun, 'div');
     if (showL) html += cell(ls[0], false, sun, '') + cell(ls[1], false, sun, 'div');
-    html += `<td class="sun">${fmtShort('0000-00-00 ' + sun.rise)}</td><td class="sun div">${fmtShort('0000-00-00 ' + sun.set)}</td>`;
+    const sr = fmtShort('0000-00-00 ' + sun.rise), ss = fmtShort('0000-00-00 ' + sun.set);
+    html += `<td class="sun sun-sep">${sr}</td><td class="sun sun-sep div">${ss}</td>`;
+    html += `<td class="sun sun-one div"><span>↑${sr}</span><span>↓${ss}</span></td>`;
     html += `<td class="moon" title="${phaseName}">${emoji}</td></tr>`;
   }
   el.innerHTML = html + '</tbody></table>';
