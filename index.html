@@ -604,7 +604,14 @@ function renderMap() {
   if (!window.L) return;
   if (!map) {
     map = L.map('map', { zoomControl: false, scrollWheelZoom: false, dragging: !L.Browser.mobile, tap: false });
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    // Minimal grey basemap (CARTO Positron), switching to Dark Matter in dark mode.
+    const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    const tileUrl = () => `https://{s}.basemaps.cartocdn.com/${dark && dark.matches ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`;
+    const tiles = L.tileLayer(tileUrl(), {
+      maxZoom: 19, subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+    }).addTo(map);
+    if (dark && dark.addEventListener) dark.addEventListener('change', () => tiles.setUrl(tileUrl()));
     marker = L.circleMarker([st.lat, st.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#0284c7', fillOpacity: 1 }).addTo(map);
   }
   map.setView([st.lat, st.lon], 9);
