@@ -223,7 +223,8 @@ const STATIONS = [
   { name: 'Bass River (Dennis/Yarmouth), MA',      id: '8447504', lat: 41.6500, lon: -70.1917, tz: 'America/New_York' },
   { name: 'Provincetown, MA',                      id: '8446121', lat: 42.0480, lon: -70.1856, tz: 'America/New_York' },
   { name: 'Scituate, MA',                          id: '8445138', lat: 42.1967, lon: -70.7200, tz: 'America/New_York' },
-  { name: 'Boston, MA',                            id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York' },
+  { name: "World's End (Hingham), MA",             id: '8444662', lat: 42.2610, lon: -70.8780, tz: 'America/New_York' },
+  { name: 'Boston, MA',                           id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York' },
   { name: 'Acadia National Park (Bar Harbor), ME', id: '8413320', lat: 44.3917, lon: -68.2050, tz: 'America/New_York' },
 ];
 
@@ -612,8 +613,8 @@ function renderMap() {
 
 // ---------- Startup ----------
 function init() {
-  const si = +store.get('station', 0);
-  state.si = Number.isInteger(si) && si >= 0 && si < STATIONS.length ? si : 0;
+  // Remember the station by its NOAA id so adding/reordering stations is safe.
+  state.si = Math.max(0, STATIONS.findIndex(s => s.id === store.get('stationId', '')));
   state.view = ['all', 'high', 'low'].includes(store.get('view', 'all')) ? store.get('view', 'all') : 'all';
   state.hiDay = !!store.get('hiDay', false);
   state.loDay = !!store.get('loDay', false);
@@ -630,7 +631,7 @@ function init() {
   syncOpts();
 
   $('station').onchange = e => {
-    state.si = +e.target.value; store.set('station', state.si);
+    state.si = +e.target.value; store.set('stationId', station().id);
     renderMap(); renderNow(); renderMonth();
     if (state.tab === 'day') renderDay();
   };
