@@ -81,6 +81,7 @@ details.opts summary { cursor:pointer; font-weight:600; }
 .chk { display:flex; gap:8px; align-items:center; margin-top:10px; cursor:pointer; }
 .chk input { width:18px; height:18px; }
 #map { height:170px; border-radius:8px; border:1px solid var(--border); z-index:0; }
+.grey-tiles { filter:grayscale(1) contrast(.9) brightness(1.05); }
 .maplink { font-size:.78rem; color:var(--muted); margin-top:4px; }
 
 /* Tabs and nav */
@@ -604,14 +605,28 @@ function renderMap() {
   if (!window.L) return;
   if (!map) {
     map = L.map('map', { zoomControl: false, scrollWheelZoom: false, dragging: !L.Browser.mobile, tap: false });
-    // Minimal grey basemap (CARTO Positron), switching to Dark Matter in dark mode.
+    // Minimal grey basemap (Esri Light/Dark Gray Canvas, no API key needed),
+    // following the device's light/dark setting.
     const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    const tileUrl = () => `https://{s}.basemaps.cartocdn.com/${dark && dark.matches ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`;
-    const tiles = L.tileLayer(tileUrl(), {
-      maxZoom: 19, subdomains: 'abcd',
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    }).addTo(map);
-    if (dark && dark.addEventListener) dark.addEventListener('change', () => tiles.setUrl(tileUrl()));
+    const esri = name => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${name}/MapServer/tile/{z}/{y}/{x}`;
+    const urls = () => dark && dark.matches
+      ? [esri('World_Dark_Gray_Base'), esri('World_Dark_Gray_Reference')]
+      : [esri('World_Light_Gray_Base'), esri('World_Light_Gray_Reference')];
+    const [baseUrl, refUrl] = urls();
+    const base = L.tileLayer(baseUrl, { maxZoom: 16, attribution: 'Tiles &copy; Esri' }).addTo(map);
+    const labels = L.tileLayer(refUrl, { maxZoom: 16 }).addTo(map);
+    // If Esri ever fails, fall back to OpenStreetMap drawn in greyscale.
+    let fellBack = false;
+    base.on('tileerror', () => {
+      if (fellBack) return;
+      fellBack = true;
+      map.removeLayer(base); map.removeLayer(labels);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap', className: 'grey-tiles' }).addTo(map);
+    });
+    if (dark && dark.addEventListener) dark.addEventListener('change', () => {
+      if (fellBack) return;
+      const [b, r] = urls(); base.setUrl(b); labels.setUrl(r);
+    });
     marker = L.circleMarker([st.lat, st.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#0284c7', fillOpacity: 1 }).addTo(map);
   }
   map.setView([st.lat, st.lon], 9);
