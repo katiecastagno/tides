@@ -21,6 +21,9 @@
   --hl-bg:#fef08a; --hl-text:#854d0e;
   --pred:#0077b6; --obs:#d97706; --night:rgba(15,23,42,.07);
   --rise:#15803d; --fall:#b91c1c;
+  --go:#15803d; --go-bg:rgba(21,128,61,.14); --cau:#b45309; --cau-bg:rgba(217,119,6,.18);
+  --nogo:#b91c1c; --nogo-bg:rgba(185,28,28,.13); --w80:#0d9488; --w120:#7c3aed; --tidefill:rgba(0,119,182,.10);
+  --tw:#a21caf; --tw-bg:rgba(162,28,175,.12); --twshade:rgba(162,28,175,.08);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -31,6 +34,9 @@
     --hl-bg:#fde047; --hl-text:#713f12;
     --pred:#38bdf8; --obs:#f59e0b; --night:rgba(0,0,0,.3);
     --rise:#4ade80; --fall:#f87171;
+    --go:#4ade80; --go-bg:rgba(74,222,128,.15); --cau:#fbbf24; --cau-bg:rgba(251,191,36,.16);
+    --nogo:#f87171; --nogo-bg:rgba(248,113,113,.15); --w80:#2dd4bf; --w120:#a78bfa; --tidefill:rgba(56,189,248,.12);
+    --tw:#e879f9; --tw-bg:rgba(232,121,249,.15); --twshade:rgba(232,121,249,.10);
   }
 }
 * { box-sizing:border-box; }
@@ -151,22 +157,106 @@ tr.today .dw { color:var(--accent); }
 .chip { border:1px solid var(--border); border-radius:999px; padding:4px 10px; font-size:.85rem; background:var(--card); }
 .chip b { margin-right:4px; }
 footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:center; }
+
+/* Top-level view switch: Tides | Drone flight */
+.mode { display:grid; grid-template-columns:1fr 1fr; gap:0; margin:0 0 14px; border:1px solid var(--border);
+  border-radius:12px; overflow:hidden; background:var(--card); }
+.mode button { border:0; border-radius:0; min-height:48px; font-size:1.02rem; font-weight:700; color:var(--muted); background:transparent; }
+.mode button + button { border-left:1px solid var(--border); }
+.mode button[aria-selected=true] { background:var(--accent); color:var(--on-accent); }
+body:not(.mode-drone) .drone-only, body.mode-drone .tides-only { display:none !important; }
+body.mode-drone .controls { grid-template-columns:1fr; }
+
+/* Drone flight conditions */
+.fnow { margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.fnow[hidden] { display:none; }
+.badge { display:inline-block; padding:4px 10px; border-radius:8px; font-weight:800; font-size:.95rem; letter-spacing:.02em; }
+.badge.go, td.go { background:var(--go-bg); color:var(--go); }
+.badge.cau, td.cau { background:var(--cau-bg); color:var(--cau); }
+.badge.nogo, td.nogo { background:var(--nogo-bg); color:var(--nogo); }
+.fnow .why { font-size:.82rem; }
+.fl-head { display:flex; gap:18px; flex-wrap:wrap; margin:10px 0 6px; }
+.limits { margin:6px 0 4px; }
+h3 { font-size:1rem; margin:18px 0 8px; }
+.wins { display:grid; gap:6px; }
+.win { display:grid; grid-template-columns:4.2rem 1fr; gap:2px 10px; text-align:left; align-items:baseline;
+  font-weight:500; padding:8px 10px; border-left:4px solid var(--border); }
+.win.go { border-left-color:var(--go); }
+.win.cau { border-left-color:var(--cau); }
+.win.none { border-left-color:var(--nogo); color:var(--muted); }
+.win.tw { border-left-color:var(--tw); }
+.win .twl, .twnote { color:var(--tw); font-weight:600; }
+.badge.tw { background:var(--tw-bg); color:var(--tw); font-size:.8rem; margin-left:4px; }
+.wx td.twc { background:var(--tw-bg); color:var(--tw); }
+.wx td.twc small { font-weight:700; }
+.daystrip .dot.tw { background:var(--tw); }
+.twbar { font-size:.8rem; margin:4px 0 2px; }
+.airsp { margin:2px 0 8px; }
+.limbox { margin:8px 0 4px; }
+.limbox summary { cursor:pointer; font-weight:600; }
+.limgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:8px 16px; margin:10px 0; }
+.lim { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.85rem; }
+.limin { display:flex; align-items:center; gap:4px; }
+.lim input { width:5.2rem; font:inherit; color:var(--text); background:var(--card); border:1px solid var(--border); border-radius:8px; padding:6px 8px; min-height:36px; }
+.lim input:invalid { border-color:var(--nogo); }
+.limbox button { margin-top:8px; }
+.hbh { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+.hbh h3 { margin-bottom:8px; }
+.hbh button { min-height:34px; padding:5px 10px; font-size:.85rem; }
+.obsw { font-size:.82rem; margin:4px 0 6px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--card); }
+.wx td.img-warn { color:var(--cau); }
+.wx td.img-ok { color:var(--accent); }
+@media (max-width:600px) { .wx .oth { display:none; } }
+.win .wd { font-weight:800; grid-row:span 2; }
+.win .wt { font-weight:700; }
+.win .wn { font-size:.8rem; color:var(--muted); }
+.win .wn .c { color:var(--cau); }
+.daystrip { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; margin-bottom:8px; }
+.daystrip button { flex:1 0 auto; min-width:3.6rem; padding:6px 6px; font-weight:600; font-size:.82rem; line-height:1.2; }
+.daystrip button[aria-pressed=true] { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+.daystrip .dot { display:block; width:8px; height:8px; border-radius:50%; margin:3px auto 0; background:var(--nogo); }
+.daystrip .dot.go { background:var(--go); } .daystrip .dot.cau { background:var(--cau); }
+#wchart { height:300px; }
+.chartbox.small { min-height:300px; }
+table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86rem; background:var(--card); border:1px solid var(--border); margin-top:8px; }
+.wx th { position:sticky; top:0; z-index:2; background:var(--head); color:var(--head-text); padding:7px 2px; font-size:.74rem; text-align:center; }
+.wx td { text-align:center; padding:5px 2px; border-bottom:1px solid var(--border); }
+.wx td b { display:block; }
+.wx td small { display:block; font-size:.7rem; opacity:.8; }
+.wx tr.past td { opacity:.45; }
+.wx tr.sel-alt td.alt { box-shadow:inset 0 0 0 1px currentColor; }
+.wx td.st { font-weight:800; font-size:.75rem; }
+.notes { font-size:.78rem; color:var(--muted); margin-top:12px; line-height:1.5; }
+.notes li { margin-bottom:3px; }
+@media (max-width:600px) {
+  table.wx { font-size:.76rem; }
+  .wx th { font-size:.64rem; padding:6px 1px; }
+  .wx td { padding:4px 1px; }
+  .wx td small { font-size:.62rem; }
+  .win { grid-template-columns:3.4rem 1fr; }
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🌊 Tide Dashboard</h1>
+  <h1 id="h1">🌊 Tide & Wind Dashboard</h1>
+
+  <div class="mode" id="mode" role="tablist" aria-label="Dashboard view">
+    <button role="tab" data-m="tides">🌊 Tides</button>
+    <button role="tab" data-m="drone">🚁 Drone flight</button>
+  </div>
 
   <div class="controls">
     <label class="f station">Location<select id="station"></select></label>
-    <label class="f">Month<select id="month"></select></label>
-    <label class="f">Year<select id="year"></select></label>
-    <button id="current" class="primary">📅 Today</button>
+    <label class="f tides-only">Month<select id="month"></select></label>
+    <label class="f tides-only">Year<select id="year"></select></label>
+    <button id="current" class="primary tides-only">📅 Today</button>
   </div>
 
   <div class="card now" id="now"><div class="loading">Loading current tide…</div></div>
+  <div class="card fnow drone-only" id="fnow"></div>
 
-  <details class="card opts" id="opts" open>
+  <details class="card opts tides-only" id="opts" open>
     <summary>⚙️ View options &amp; station map</summary>
     <div class="opts-body">
       <div>
@@ -184,12 +274,12 @@ footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:cente
     </div>
   </details>
 
-  <div class="tabs" id="tabs" role="tablist">
+  <div class="tabs tides-only" id="tabs" role="tablist">
     <button role="tab" id="tab-month" aria-selected="true">🗓️ Monthly table</button>
     <button role="tab" id="tab-day" aria-selected="false">📈 Daily graph</button>
   </div>
 
-  <section id="panel-month">
+  <section id="panel-month" class="tides-only">
     <div class="nav">
       <button id="prevM">◀ Prev</button><h2 id="mtitle"></h2><button id="nextM">Next ▶</button>
     </div>
@@ -200,7 +290,7 @@ footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:cente
     <div class="sub" style="text-align:center">Tap any day to see its graph.</div>
   </section>
 
-  <section id="panel-day" hidden>
+  <section id="panel-day" class="tides-only" hidden>
     <div class="nav">
       <button id="prevD" aria-label="Previous day">◀</button>
       <input type="date" id="dayInput">
@@ -211,6 +301,50 @@ footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:cente
     <div class="chips" id="chips"></div>
   </section>
 
+  <section id="panel-flight" class="drone-only">
+    <div class="fl-head">
+      <div>
+        <div class="k">Flight altitude</div>
+        <div class="seg" id="alt"><button data-a="80">80 m · 262 ft</button><button data-a="120">120 m · 394 ft</button></div>
+      </div>
+      <div>
+        <div class="k">Tide</div>
+        <div class="seg" id="tideF"><button data-t="any">Any tide</button><button data-t="low">±2 h of low</button></div>
+      </div>
+    </div>
+    <div class="sub limits" id="limits"></div>
+    <div class="sub airsp" id="airsp"></div>
+
+    <details class="card limbox" id="limbox">
+      <summary>⚙️ Edit flight limits <span class="sub">(saved on this device)</span></summary>
+      <div class="limgrid" id="limgrid"></div>
+      <div class="sub">Visibility ≥ 3 mi and 500 ft below clouds are Part 107 minimums, so they can't be changed here.</div>
+      <button id="limReset">Reset to defaults</button>
+    </details>
+
+    <h3>Flight windows · next 7 days</h3>
+    <div class="wins" id="wins"><div class="loading">Loading forecast…</div></div>
+
+    <div class="hbh"><h3>Hour by hour</h3><button id="copyPlan">📋 Copy plan for this day</button></div>
+    <div class="daystrip" id="daystrip"></div>
+    <div class="twbar" id="twbar"></div>
+    <div class="obsw" id="obsw" hidden></div>
+    <div class="chartbox small"><div id="wchart"></div><div id="wchartMsg"></div></div>
+    <div id="hourly"></div>
+
+    <ul class="notes">
+      <li><b>Gusts</b> are forecast only at 10 m. The check uses whichever is higher: the 10 m gust or the sustained wind at your altitude, since gusts aloft are usually stronger than at the surface.</li>
+      <li><b>Ceiling</b> is an estimate: the lowest model level with ≥50% cloud cover (about 350, 1,000, 1,700 and 2,500 ft). It's also flagged as a caution when low cloud is ≥50% and the temperature/dew point spread suggests a low base. Confirm with the nearest airport report (<span id="metar"></span>).</li>
+      <li><b>Thunderstorms</b> (⛈) are NO-GO. High CAPE (energy available for storms) is a CAUTION, since storms can pop up even when the hourly forecast shows little rain.</li>
+      <li><b>Kp</b> is the planetary geomagnetic index from <a href="https://www.swpc.noaa.gov/products/planetary-k-index" target="_blank" rel="noopener">NOAA SWPC</a>, forecast in 3-hour blocks about 3 days ahead (– beyond that). Kp 5+ is a geomagnetic storm and can degrade GNSS/RTK accuracy. It's a caution, not a no-go.</li>
+      <li><b>Sun</b> is the sun's elevation for imagery planning and doesn't affect GO/NO-GO. "Long shadows" means low sun. "Glint risk" means high sun reflecting off water and wet sand. "Even light" means overcast (≥80% cloud), which is often best for photogrammetry.</li>
+      <li><b>Measured wind</b> comes from the tide station's sensor, where it has one (Boston does), and is compared with the 10 m forecast for today.</li>
+      <li><b>2,000 ft horizontal clearance from clouds</b> can't be forecast. Check it by eye on site.</li>
+      <li><b>🌅 Civil twilight</b> (sun 0–6° below the horizon) is shown separately in pink. Part 107 allows flying then only with anti-collision lighting visible for 3 statute miles. Windows that are daylight show the twilight minutes on either side as extras.</li>
+      <li>Check airspace (LAANC / B4UFLY) and TFRs before every flight. Forecast from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>. Not a substitute for a preflight weather briefing.</li>
+    </ul>
+  </section>
+
   <footer>Predictions &amp; observations from NOAA CO-OPS · heights in ft above MLLW · times local to the station · not for navigation</footer>
 </div>
 
@@ -219,15 +353,35 @@ footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:cente
 
 // ---------- Configured locations ----------
 const STATIONS = [
-  { name: 'Wellfleet, MA',                         id: '8446613', lat: 41.9300, lon: -70.0417, tz: 'America/New_York' },
-  { name: 'Chatham, MA',                           id: '8447435', lat: 41.6811, lon: -69.9511, tz: 'America/New_York' },
-  { name: 'Bass River (Dennis/Yarmouth), MA',      id: '8447504', lat: 41.6500, lon: -70.1917, tz: 'America/New_York' },
-  { name: 'Provincetown, MA',                      id: '8446121', lat: 42.0480, lon: -70.1856, tz: 'America/New_York' },
-  { name: 'Scituate, MA',                          id: '8445138', lat: 42.1967, lon: -70.7200, tz: 'America/New_York' },
-  { name: "World's End (Hingham), MA",             id: '8444662', lat: 42.2610, lon: -70.8780, tz: 'America/New_York' },
-  { name: 'Boston, MA',                           id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York' },
-  { name: 'Acadia National Park (Bar Harbor), ME', id: '8413320', lat: 44.3917, lon: -68.2050, tz: 'America/New_York' },
+  // metar = nearest airport weather report, used to cross-check cloud ceiling.
+  { name: 'Wellfleet, MA',                         id: '8446613', lat: 41.9300, lon: -70.0417, tz: 'America/New_York', metar: 'KPVC' },
+  { name: 'Chatham, MA',                           id: '8447435', lat: 41.6811, lon: -69.9511, tz: 'America/New_York', metar: 'KCQX' },
+  { name: 'Bass River (Dennis/Yarmouth), MA',      id: '8447504', lat: 41.6500, lon: -70.1917, tz: 'America/New_York', metar: 'KHYA' },
+  { name: 'Provincetown, MA',                      id: '8446121', lat: 42.0480, lon: -70.1856, tz: 'America/New_York', metar: 'KPVC' },
+  { name: 'Scituate, MA',                          id: '8445138', lat: 42.1967, lon: -70.7200, tz: 'America/New_York', metar: 'KGHG' },
+  { name: "World's End (Hingham), MA",             id: '8444662', lat: 42.2610, lon: -70.8780, tz: 'America/New_York', metar: 'KBOS' },
+  { name: 'Boston, MA',                           id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York', metar: 'KBOS' },
+  { name: 'Acadia National Park (Bar Harbor), ME', id: '8413320', lat: 44.3917, lon: -68.2050, tz: 'America/New_York', metar: 'KBHB' },
 ];
+
+// ---------- Drone flight limits ----------
+// Defaults; the editable ones can be changed on the page and are saved per device.
+const DEFAULT_LIMITS = {
+  wind: 15,          // mph, sustained at flight altitude
+  gust: 25,          // mph
+  popCaution: 40,    // % chance of precipitation → caution
+  kp: 5,             // Kp index → caution (GNSS / RTK degradation)
+  cape: 1000,        // J/kg convective energy → caution (storms possible)
+  lowSun: 15,        // ° sun elevation below which shadows get long
+  glintSun: 45,      // ° sun elevation above which glint off water is likely
+};
+const FIXED_LIMITS = {
+  nearFrac: 0.8,     // within 80% of a wind limit → caution
+  visMi: 3,          // Part 107: 3 statute miles
+  cloudClearFt: 500, // Part 107: 500 ft below clouds
+};
+const LIMITS = Object.assign({}, DEFAULT_LIMITS, FIXED_LIMITS);
+const ALT_FT = { 80: 262, 120: 394 };
 
 const API = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -280,7 +434,8 @@ function stationNow(tz) {
 
 // ---------- Sun & moon ----------
 // Sunrise/sunset using the standard NOAA/suncalc formulation (accurate to about a minute).
-function sunTimes(iso, lat, lon, tz) {
+// altDeg: -0.833 = sunrise/sunset; -6 = civil dawn/dusk.
+function sunTimes(iso, lat, lon, tz, altDeg = -0.833) {
   const RAD = Math.PI / 180, DAY = 86400000, J1970 = 2440588, J2000 = 2451545, E = RAD * 23.4397;
   const [y, m, d] = parseIso(iso);
   const ms = Date.UTC(y, m - 1, d, 12) - (lon / 15) * 3600000; // ≈ local solar noon
@@ -293,7 +448,7 @@ function sunTimes(iso, lat, lon, tz) {
   const L = M + C + RAD * 102.9372 + Math.PI;
   const dec = Math.asin(Math.sin(E) * Math.sin(L));
   const Jnoon = J2000 + ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L);
-  const h0 = -0.833 * RAD;
+  const h0 = altDeg * RAD;
   const cosw = (Math.sin(h0) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
   const w = Math.acos(Math.max(-1, Math.min(1, cosw)));
   const a = 0.0009 + (w + lw) / (2 * Math.PI) + n;
@@ -566,11 +721,7 @@ async function renderDay() {
     marker: { size: 8, color: cssVar('--pred') },
   });
 
-  const night = { type: 'rect', xref: 'x', yref: 'paper', y0: 0, y1: 1, fillcolor: cssVar('--night'), line: { width: 0 }, layer: 'below' };
-  const shapes = [
-    Object.assign({}, night, { x0, x1: `${day} ${sun.rise}` }),
-    Object.assign({}, night, { x0: `${day} ${sun.set}`, x1 }),
-  ];
+  const shapes = darkShapes(day, sun, sunTimes(day, st.lat, st.lon, st.tz, -6), x0, x1);
   const annotations = [];
   if (day === now.date) {
     shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: now.str, x1: now.str, y0: 0, y1: 1,
@@ -595,6 +746,568 @@ async function renderDay() {
     `<span class="chip"><b>Sunrise</b>${fmtLong('0000-00-00 ' + sun.rise)}</span>` +
     `<span class="chip"><b>Sunset</b>${fmtLong('0000-00-00 ' + sun.set)}</span>` +
     `<span class="chip">${emoji} ${phaseName}</span>`;
+}
+
+// ---------- Drone: weather from Open-Meteo ----------
+const OM = 'https://api.open-meteo.com/v1/forecast';
+const LEVELS = [1000, 975, 950, 925]; // hPa ≈ 350, 1000, 1700, 2500 ft
+const wxCache = new Map();
+function getWx(st) {
+  const hit = wxCache.get(st.id);
+  if (hit && Date.now() - hit.at < 15 * 60000) return hit.p; // refresh every 15 min
+  const base = { latitude: st.lat, longitude: st.lon, timezone: st.tz, forecast_days: 7, timeformat: 'unixtime',
+    wind_speed_unit: 'mph', precipitation_unit: 'inch' };
+  const basic = ['wind_speed_10m', 'wind_speed_80m', 'wind_speed_120m', 'wind_direction_80m', 'wind_direction_120m', 'wind_gusts_10m',
+    'precipitation', 'precipitation_probability', 'visibility', 'cloud_cover_low', 'cloud_cover', 'temperature_2m', 'dew_point_2m',
+    'weather_code', 'cape'];
+  const levels = LEVELS.flatMap(l => [`cloud_cover_${l}hPa`, `geopotential_height_${l}hPa`]);
+  const get = vars => fetch(OM + '?' + new URLSearchParams(Object.assign({}, base, { hourly: vars.join(',') })))
+    .then(r => r.json().then(j => { if (!r.ok || j.error) throw new Error(j.reason || 'HTTP ' + r.status); return j; }));
+  // If pressure-level cloud data is ever unavailable, fall back to the basic set.
+  const p = get(basic.concat(levels)).catch(() => get(basic)).then(j => parseWx(j, st));
+  wxCache.set(st.id, { at: Date.now(), p });
+  p.catch(() => wxCache.delete(st.id));
+  return p;
+}
+function parseWx(j, st) {
+  const H = j.hourly, U = j.hourly_units || {}, elev = j.elevation || 0;
+  const col = k => H[k] || [];
+  const visMi = v => v == null ? null : (U.visibility === 'ft' ? v / 5280 : v / 1609.344);
+  const inch = v => v == null ? null : (U.precipitation === 'mm' ? v / 25.4 : v);
+  const spreadC = (t, d) => t == null || d == null ? null : ((U.temperature_2m || '').includes('F') ? (t - d) / 1.8 : t - d);
+  const anyLevels = LEVELS.some(l => col(`cloud_cover_${l}hPa`).some(v => v != null));
+  const local = s => { const p = tzParts(new Date(s * 1000), st.tz); return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`; };
+  return H.time.map((t, i) => {
+    // Ceiling from model levels: height of the lowest level with ≥50% cloud.
+    let ceilModel = null;
+    if (anyLevels) {
+      ceilModel = Infinity;
+      for (const l of LEVELS) {
+        const cc = col(`cloud_cover_${l}hPa`)[i], gh = col(`geopotential_height_${l}hPa`)[i];
+        if (cc == null || gh == null) continue;
+        const ft = (gh - elev) * 3.281;
+        if (ft <= 0) continue; // level is below ground
+        if (cc >= 50) { ceilModel = ft; break; }
+      }
+    }
+    // Cloud-base estimate from temperature/dew-point spread (~400 ft per °C), only when low cloud ≥50%.
+    const low = col('cloud_cover_low')[i], sp = spreadC(col('temperature_2m')[i], col('dew_point_2m')[i]);
+    const ceilDew = low != null && low >= 50 && sp != null ? Math.max(0, sp * 400) : null;
+    const utcMs = typeof t === 'number' ? t * 1000 : null;
+    return {
+      t: typeof t === 'number' ? local(t) : String(t).replace('T', ' '),
+      utcMs,
+      w10: col('wind_speed_10m')[i],
+      w: { 80: col('wind_speed_80m')[i], 120: col('wind_speed_120m')[i] },
+      d: { 80: col('wind_direction_80m')[i], 120: col('wind_direction_120m')[i] },
+      gust: col('wind_gusts_10m')[i],
+      precip: inch(col('precipitation')[i]),
+      pop: col('precipitation_probability')[i],
+      vis: visMi(col('visibility')[i]),
+      code: col('weather_code')[i],
+      cape: col('cape')[i],
+      cloud: col('cloud_cover')[i],
+      sun: utcMs == null ? null : sunPos(utcMs, st.lat, st.lon),
+      kp: null,
+      low, ceilModel, ceilDew,
+    };
+  });
+}
+
+// ---------- Drone: Kp index from NOAA SWPC ----------
+const KP_URL = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json';
+let kpCache = null;
+function getKp() {
+  if (kpCache && Date.now() - kpCache.at < 30 * 60000) return kpCache.p;
+  const p = fetch(KP_URL).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(parseKp);
+  kpCache = { at: Date.now(), p };
+  p.catch(() => { kpCache = null; });
+  return p;
+}
+// Accepts either SWPC layout: [header, ...rows] arrays, or an array of objects.
+function parseKp(j) {
+  let rows = [];
+  if (Array.isArray(j) && Array.isArray(j[0])) {
+    const hd = j[0].map(s => String(s).toLowerCase()), it = hd.indexOf('time_tag'), ik = hd.indexOf('kp');
+    rows = j.slice(1).map(r => ({ t: r[it], kp: r[ik] }));
+  } else if (Array.isArray(j)) {
+    rows = j.map(o => ({ t: o.time_tag, kp: o.kp != null ? o.kp : o.Kp != null ? o.Kp : o.kp_index }));
+  }
+  return rows.map(r => {
+    const s = String(r.t || '').replace(' ', 'T');
+    return { ms: Date.parse(/Z$|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z'), kp: parseFloat(r.kp) };
+  }).filter(r => isFinite(r.ms) && isFinite(r.kp));
+}
+function kpAt(bins, ms) {
+  if (!bins || ms == null) return null;
+  const b = bins.find(x => ms >= x.ms && ms < x.ms + 3 * 3600000); // Kp is reported in 3-hour blocks
+  return b ? b.kp : null;
+}
+const fmtKp = k => k == null ? '–' : (Math.round(k * 10) / 10).toString();
+
+async function getFlightData(st) {
+  const [hours, kp] = await Promise.all([getWx(st), getKp().catch(() => null)]);
+  for (const h of hours) h.kp = kpAt(kp, h.utcMs);
+  return hours;
+}
+
+// ---------- Drone: measured wind at the tide station (NOAA CO-OPS) ----------
+const obsCache = new Map();
+function getObsWind(st) {
+  const hit = obsCache.get(st.id);
+  if (hit && Date.now() - hit.at < 6 * 60000) return hit.p;
+  const q = new URLSearchParams({ product: 'wind', station: st.id, range: 8, units: 'english',
+    time_zone: 'lst_ldt', format: 'json', application: 'tide_dashboard' });
+  const KT = 1.15078; // knots → mph
+  const num = v => v === '' || v == null ? null : +v;
+  const p = fetch(API + '?' + q).then(r => r.json()).then(j => {
+    if (j.error || !j.data) return null; // many stations have no wind sensor
+    const d = j.data.filter(x => num(x.s) != null).map(x => ({ t: x.t, s: num(x.s) * KT, g: num(x.g) == null ? null : num(x.g) * KT, d: num(x.d) }));
+    return d.length ? d : null;
+  }).catch(() => null);
+  obsCache.set(st.id, { at: Date.now(), p });
+  return p;
+}
+
+// ---------- Drone: sun position (for imagery lighting) ----------
+function sunPos(ms, lat, lon) {
+  const RAD = Math.PI / 180, e = RAD * 23.4397;
+  const d = ms / 86400000 - 0.5 + 2440588 - 2451545;
+  const M = RAD * (357.5291 + 0.98560028 * d);
+  const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  const L = M + C + RAD * 102.9372 + Math.PI;
+  const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const ra = Math.atan2(Math.sin(L) * Math.cos(e), Math.cos(L));
+  const H = RAD * (280.16 + 360.9856235 * d) + lon * RAD - ra;
+  const phi = lat * RAD;
+  const el = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+  const az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi));
+  return { el: el / RAD, az: (az / RAD + 180) % 360 };
+}
+// Imagery note for an hour: overcast = even light; low sun = long shadows; high sun = glint over water.
+function lightTag(h) {
+  if (!h.sun || h.sun.el <= 0) return null;
+  if (h.cloud != null && h.cloud >= 80) return { t: 'even light', c: 'img-ok' };
+  if (h.sun.el < LIMITS.lowSun) return { t: 'long shadows', c: 'img-warn' };
+  if (h.sun.el > LIMITS.glintSun) return { t: 'glint risk', c: 'img-warn' };
+  return null;
+}
+
+const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const compass = deg => deg == null ? '' : COMPASS[Math.round(deg / 22.5) % 16];
+const r0 = v => v == null ? '–' : Math.round(v);
+function ceilShown(h) {
+  const vals = [h.ceilModel, h.ceilDew].filter(v => v != null);
+  return vals.length ? Math.min(...vals) : null;
+}
+function fmtCeil(ft) {
+  if (ft == null) return '–';
+  if (ft === Infinity) return '>2,500';
+  return (Math.round(ft / 100) * 100).toLocaleString();
+}
+const isThunder = h => h.code != null && h.code >= 95; // WMO codes 95, 96, 99
+
+// Go / caution / no-go for one forecast hour at one altitude.
+function hourStatus(h, alt) {
+  const nogo = [], cau = [];
+  const w = h.w[alt];
+  const gust = Math.max(h.gust == null ? 0 : h.gust, w == null ? 0 : w);
+  const near = LIMITS.nearFrac;
+  if (w == null) cau.push('no wind data');
+  else if (w > LIMITS.wind) nogo.push(`wind ${Math.round(w)} mph`);
+  else if (w >= LIMITS.wind * near) cau.push('wind near limit');
+  if (h.gust == null && w == null) { /* already flagged as no data */ }
+  else if (gust > LIMITS.gust) nogo.push(`gusts ${Math.round(gust)} mph`);
+  else if (gust >= LIMITS.gust * near) cau.push('gusts near limit');
+  if (isThunder(h)) nogo.push('thunderstorm');
+  else if (h.cape != null && h.cape >= LIMITS.cape) cau.push('storms possible (unstable air)');
+  if (h.precip != null && h.precip >= 0.01) nogo.push('rain');
+  else if (h.pop != null && h.pop >= LIMITS.popCaution) cau.push(`${h.pop}% rain chance`);
+  if (h.vis == null) cau.push('no visibility data');
+  else if (h.vis < LIMITS.visMi) nogo.push(`visibility ${h.vis.toFixed(1)} mi`);
+  const need = ALT_FT[alt] + LIMITS.cloudClearFt;
+  if (h.ceilModel != null && h.ceilModel < need) nogo.push('low ceiling');
+  else if (h.ceilDew != null && h.ceilDew < need) cau.push('possible low cloud');
+  if (h.kp != null && h.kp >= LIMITS.kp) cau.push(`Kp ${fmtKp(h.kp)} (GNSS)`);
+  const level = nogo.length ? 'nogo' : cau.length ? 'cau' : 'go';
+  return { level, nogo, cau };
+}
+const LABEL = { go: 'GO', cau: 'CAUTION', nogo: 'NO-GO' };
+
+// Flight windows: daylight stretches with no no-go hours (optionally ±2 h of a low tide).
+function flightWindows(hours, hilo, st, alt, tideMode, nowMs) {
+  const days = [...new Set(hours.map(h => h.t.slice(0, 10)))];
+  const lows = hilo.filter(p => !isHigh(p));
+  return days.map(day => {
+    const sun = sunTimes(day, st.lat, st.lon, st.tz), civ = sunTimes(day, st.lat, st.lon, st.tz, -6);
+    const s0 = tsMs(`${day} ${sun.rise}`), s1 = tsMs(`${day} ${sun.set}`);   // sunrise / sunset
+    const d0 = tsMs(`${day} ${civ.rise}`), d1 = tsMs(`${day} ${civ.set}`);   // civil dawn / dusk
+    const segs = hours.filter(h => h.t.startsWith(day)).map(h => {
+      const m = tsMs(h.t);
+      return { a: m - 30 * 60000, b: m + 30 * 60000, s: hourStatus(h, alt) };
+    });
+    // Merge consecutive flyable hours.
+    let runs = [], cur = null;
+    for (const g of segs) {
+      if (g.s.level === 'nogo') { cur = null; continue; }
+      if (cur && g.a <= cur.b) { cur.b = g.b; cur.hs.push(g); }
+      else { cur = { a: g.a, b: g.b, hs: [g] }; runs.push(cur); }
+    }
+    // Clip to civil dawn–dusk and to the future.
+    const lo = Math.max(d0, nowMs || 0);
+    runs = runs.map(x => Object.assign({}, x, { a: Math.max(x.a, lo), b: Math.min(x.b, d1) })).filter(x => x.b > x.a);
+    // Optionally clip to ±2 h around each low tide.
+    if (tideMode === 'low') {
+      const out = [];
+      for (const x of runs) for (const L of lows) {
+        const lm = tsMs(L.t), a = Math.max(x.a, lm - 2 * 3600000), b = Math.min(x.b, lm + 2 * 3600000);
+        if (b > a) out.push(Object.assign({}, x, { a, b }));
+      }
+      runs = out;
+    }
+    runs = runs.filter(x => x.b - x.a >= 30 * 60000).map(x => {
+      // Split each window into its daylight part and any civil-twilight parts.
+      const tw = [];
+      if (x.a < s0) tw.push({ a: x.a, b: Math.min(x.b, s0) });
+      if (x.b > s1) tw.push({ a: Math.max(x.a, s1), b: x.b });
+      const da = Math.max(x.a, s0), db = Math.min(x.b, s1);
+      return Object.assign(x, {
+        // Cautions only from the hours that overlap the final (trimmed) window.
+        cau: [...new Set(x.hs.filter(g => g.b > x.a && g.a < x.b).flatMap(g => g.s.cau))],
+        lows: lows.filter(L => { const m = tsMs(L.t); return m >= x.a && m <= x.b; }),
+        tw: tw.filter(p => p.b > p.a),
+        dayPart: db > da ? { a: da, b: db } : null,
+      });
+    });
+    // Most common reason the daylight hours were no-go, for days without a window.
+    const counts = {};
+    for (const g of segs) if (g.b > d0 && g.a < d1) for (const r of g.s.nogo) { const k = r.replace(/ \d.*$/, ''); counts[k] = (counts[k] || 0) + 1; }
+    const why = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 2);
+    const lit = runs.filter(x => x.dayPart);
+    const best = lit.some(x => !x.cau.length) ? 'go' : lit.length ? 'cau' : runs.length ? 'tw' : 'nogo';
+    return { day, runs, best, why, sun, civ };
+  });
+}
+
+// ---------- Drone: "flight now" card ----------
+let fnowTok = 0;
+async function renderFlightNow() {
+  const el = $('fnow');
+  if (state.mode !== 'drone') return;
+  const tok = ++fnowTok, st = station(), alt = state.alt;
+  let hours;
+  try { hours = await getFlightData(st); }
+  catch (err) { if (tok === fnowTok) el.innerHTML = `<span class="err" style="padding:0">Couldn't load wind forecast (${esc(err.message)}).</span>`; return; }
+  if (tok !== fnowTok) return;
+  const now = stationNow(st.tz), h = hours.find(x => x.t.startsWith(now.str.slice(0, 13)));
+  if (!h) { el.innerHTML = '<span class="muted">No forecast for this hour.</span>'; return; }
+  const s = hourStatus(h, alt);
+  const sun = sunTimes(now.date, st.lat, st.lon, st.tz), m = hmToMin(now.str.slice(11, 16));
+  const civ = sunTimes(now.date, st.lat, st.lon, st.tz, -6);
+  const dark = m < civ.riseMin || m > civ.setMin;
+  const twilight = !dark && (m < sun.riseMin || m > sun.setMin);
+  const level = dark ? 'nogo' : s.level;
+  const reasons = (dark ? [m < civ.riseMin ? 'night (before civil dawn)' : 'night (after civil dusk)'] : []).concat(s.nogo, s.cau);
+  const twNote = twilight
+    ? `<div class="sub twnote">🌅 Civil twilight until ${m < sun.riseMin ? 'sunrise ' + fmtShort('0000-00-00 ' + sun.rise) : 'dusk ' + fmtShort('0000-00-00 ' + civ.set)}: anti-collision lights visible 3 mi required</div>` : '';
+  const sp = sunPos(Date.now(), st.lat, st.lon), lt = lightTag(Object.assign({}, h, { sun: sp }));
+  el.innerHTML = `
+    <div><div class="k">🚁 Flight now · ${alt} m</div><span class="badge ${level}">${LABEL[level]}</span>${twilight ? '<span class="badge tw">TWILIGHT</span>' : ''}</div>
+    <div class="why">
+      <div>Wind ${r0(h.w[alt])} mph ${compass(h.d[alt])} · gust ${r0(Math.max(h.gust || 0, h.w[alt] || 0))} · vis ${h.vis == null ? '–' : h.vis >= 10 ? '10+' : h.vis.toFixed(1)} mi · ceiling ${fmtCeil(ceilShown(h))} ft${isThunder(h) ? ' · ⛈' : ''} · Kp ${fmtKp(h.kp)}${sp.el > 0 ? ` · sun ${Math.round(sp.el)}°${lt ? ' (' + lt.t + ')' : ''}` : ''}</div>
+      ${reasons.length ? `<div class="sub">${esc(reasons.join(' · '))}</div>` : ''}
+      ${twNote}
+    </div>`;
+}
+
+// ---------- Drone: Flight tab ----------
+function airspaceLinks(st) {
+  const fm = `https://faa.maps.arcgis.com/apps/webappviewer/index.html?id=9c2e4406710048e19806ebf6a06754ad&center=${st.lon},${st.lat}&level=12`;
+  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+  return `✈️ Airspace for ${esc(st.name)}: ${a('https://b4ufly.aloft.ai/', 'B4UFLY')} · ${a(fm, 'FAA UAS facility map (LAANC grid)')} · ${a('https://tfr.faa.gov/', 'TFRs')} · ${a('https://notams.aim.faa.gov/notamSearch/nsapp.html#/', 'NOTAMs')}`;
+}
+
+let flightTok = 0, lastPlan = '';
+async function renderFlight() {
+  const tok = ++flightTok, st = station(), alt = state.alt;
+  for (const b of $('alt').querySelectorAll('button')) b.setAttribute('aria-pressed', +b.dataset.a === alt);
+  for (const b of $('tideF').querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.t === state.tideF);
+  $('limits').textContent = `GO when: wind ≤ ${LIMITS.wind} mph at ${alt} m · gusts ≤ ${LIMITS.gust} mph · no rain or thunderstorms · visibility ≥ ${LIMITS.visMi} mi · ceiling ≥ ${(ALT_FT[alt] + LIMITS.cloudClearFt).toLocaleString()} ft · sunrise–sunset (civil twilight shown separately). CAUTION within 80% of a wind limit, ≥${LIMITS.popCaution}% rain chance, CAPE ≥ ${LIMITS.cape} J/kg, Kp ≥ ${LIMITS.kp}, or possible low cloud.`;
+  $('airsp').innerHTML = airspaceLinks(st);
+  $('metar').innerHTML = `<a href="https://aviationweather.gov/data/metar/?ids=${st.metar}&taf=1" target="_blank" rel="noopener">${st.metar} METAR/TAF</a>`;
+
+  const now = stationNow(st.tz);
+  let hours, hilo, obs;
+  try {
+    [hours, hilo, obs] = await Promise.all([getFlightData(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 8)), getObsWind(st)]);
+  } catch (err) {
+    if (tok === flightTok) showError($('wins'), err, renderFlight);
+    return;
+  }
+  if (tok !== flightTok) return;
+
+  const days = flightWindows(hours, hilo, st, alt, state.tideF, tsMs(now.str));
+  if (!days.some(d => d.day === state.fday)) state.fday = days[0].day;
+
+  const dayName = d => d === now.date ? 'Today' : `${WD[weekday(d)]} ${+d.slice(8)}`;
+  $('wins').innerHTML = days.map(d => {
+    if (!d.runs.length) {
+      const why = d.why.length ? d.why.join(', ') : (state.tideF === 'low' ? 'no flyable low tide in daylight' : d.day === now.date ? 'rest of today' : '');
+      return `<button class="win none" data-day="${d.day}"><span class="wd">${dayName(d.day)}</span><span class="wt">No window</span><span class="wn">${esc(why)}</span></button>`;
+    }
+    const span = p => `${fmtShort(msToStr(p.a))} – ${fmtShort(msToStr(p.b))}`;
+    return d.runs.map((x, i) => {
+      const main = x.dayPart || x.tw[0];
+      const twText = x.dayPart
+        ? x.tw.map(p => `🌅 + twilight ${span(p)}`).join(' · ')
+        : `🌅 Civil twilight only`;
+      const notes = [
+        x.lows.map(L => `Low ${fmtShort(L.t)} ${(+L.v).toFixed(1)} ft`).join(' · '),
+        x.tw.length ? `<span class="twl">${twText}</span>` : '',
+        x.cau.length ? `<span class="c">⚠ ${esc(x.cau.join(', '))}</span>` : '',
+      ].filter(Boolean).join(' · ');
+      const cls = !x.dayPart ? 'tw' : x.cau.length ? 'cau' : 'go';
+      return `
+      <button class="win ${cls}" data-day="${d.day}">
+        <span class="wd">${i === 0 ? dayName(d.day) : ''}</span>
+        <span class="wt">${span(main)} <span class="sub">(${fmtDur((main.b - main.a) / 60000)})</span></span>
+        <span class="wn">${notes}</span>
+      </button>`;
+    }).join('');
+  }).join('');
+
+  $('daystrip').innerHTML = days.map(d =>
+    `<button data-day="${d.day}" aria-pressed="${d.day === state.fday}">${dayName(d.day)}<span class="dot ${d.best}"></span></button>`).join('');
+
+  const dayInfo = days.find(d => d.day === state.fday);
+  renderFlightDay(hours, hilo, dayInfo, now, obs);
+  lastPlan = planText(st, dayInfo, hours, hilo, alt, now);
+}
+
+// Measured wind vs the 10 m forecast over the last 6 hours.
+function obsSummary(obs, hours, now) {
+  if (!obs) return '<span class="muted">📡 This tide station has no wind sensor, so there\'s no measured wind to compare with the forecast.</span>';
+  const last = obs[obs.length - 1], nowMs = tsMs(now.str), diffs = [];
+  for (const h of hours) {
+    const m = tsMs(h.t);
+    if (m > nowMs || m < nowMs - 6 * 3600000 || h.w10 == null) continue;
+    const near = obs.filter(o => Math.abs(tsMs(o.t) - m) <= 30 * 60000);
+    if (near.length) diffs.push(near.reduce((a, o) => a + o.s, 0) / near.length - h.w10);
+  }
+  const bias = diffs.length >= 2 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null;
+  let txt = `📡 <b>Measured at the tide station</b> (${fmtShort(last.t)}): <b>${r0(last.s)} mph ${compass(last.d)}</b>${last.g != null ? `, gust ${r0(last.g)}` : ''}. `;
+  if (bias != null) txt += Math.abs(bias) < 2
+    ? 'The surface (10 m) forecast has been about right over the last 6 h.'
+    : `The surface (10 m) forecast has been running about <b>${r0(Math.abs(bias))} mph ${bias > 0 ? 'low' : 'high'}</b> over the last 6 h${bias > 0 ? ', so expect it windier than shown' : ''}.`;
+  return txt;
+}
+
+function renderFlightDay(hours, hilo, dayInfo, now, obs) {
+  const st = station(), alt = state.alt, day = dayInfo.day, sun = dayInfo.sun, civ = dayInfo.civ;
+  const other = alt === 80 ? 120 : 80;
+  const dh = hours.filter(h => h.t.startsWith(day));
+  const nowMs = tsMs(now.str), isToday = day === now.date;
+  const hm = s => fmtShort('0000-00-00 ' + s);
+  $('twbar').innerHTML = `<span class="twnote">🌅 Civil twilight</span> ${hm(civ.rise)}–${hm(sun.rise)} and ${hm(sun.set)}–${hm(civ.set)} · <span class="muted">sunrise ${hm(sun.rise)}, sunset ${hm(sun.set)}</span>`;
+  $('obsw').innerHTML = isToday ? obsSummary(obs, hours, now) : '';
+  $('obsw').hidden = !isToday;
+
+  // Hourly table, civil dawn to civil dusk; twilight hours highlighted.
+  const lit = dh.filter(h => { const m = hmToMin(h.t.slice(11, 16)); return m + 30 >= civ.riseMin && m - 30 <= civ.setMin; });
+  const isTw = h => { const m = hmToMin(h.t.slice(11, 16)); return m < sun.riseMin || m > sun.setMin; };
+  const altCell = (h, a) => {
+    const w = h.w[a], cls = w == null ? '' : w > LIMITS.wind ? 'nogo' : w >= LIMITS.wind * LIMITS.nearFrac ? 'cau' : 'go';
+    return `<td class="${cls}${a === alt ? ' alt' : ' oth'}"><b>${r0(w)}</b><small>${compass(h.d[a])}</small></td>`;
+  };
+  const th = a => `<th${a === alt ? '' : ' class="oth"'}>${a} m<br>mph</th>`;
+  let html = `<table class="wx"><thead><tr><th>Time</th>${th(80)}${th(120)}<th>Gust<br>mph</th><th>Rain</th><th>Vis<br>mi</th><th>Ceiling<br>ft</th><th>Kp</th><th>Sun</th><th>${alt} m</th></tr></thead><tbody>`;
+  for (const h of lit) {
+    const s = hourStatus(h, alt);
+    const g = Math.max(h.gust || 0, h.w[alt] || 0);
+    const gc = g > LIMITS.gust ? 'nogo' : g >= LIMITS.gust * LIMITS.nearFrac ? 'cau' : 'go';
+    const storm = isThunder(h), unstable = !storm && h.cape != null && h.cape >= LIMITS.cape;
+    const rc = storm || (h.precip != null && h.precip >= 0.01) ? 'nogo' : unstable || (h.pop != null && h.pop >= LIMITS.popCaution) ? 'cau' : '';
+    const rainTop = storm ? '⛈' : h.pop == null ? '–' : h.pop + '%';
+    const rainSub = storm ? (h.pop == null ? '' : h.pop + '%') : unstable ? '⚡ unstable' : h.precip ? h.precip.toFixed(2) + '"' : '';
+    const vc = h.vis == null ? '' : h.vis < LIMITS.visMi ? 'nogo' : 'go';
+    const need = ALT_FT[alt] + LIMITS.cloudClearFt;
+    const cc = h.ceilModel != null && h.ceilModel < need ? 'nogo' : h.ceilDew != null && h.ceilDew < need ? 'cau' : 'go';
+    const kc = h.kp == null ? '' : h.kp >= LIMITS.kp ? 'cau' : 'go';
+    const lt = lightTag(h);
+    const past = tsMs(h.t) + 30 * 60000 < nowMs;
+    html += `<tr class="sel-alt${past ? ' past' : ''}" title="${esc(s.nogo.concat(s.cau).join(' · '))}">
+      <td${isTw(h) ? ' class="twc"' : ''}><b>${fmtShort(h.t).replace(':00', '')}</b>${isTw(h) ? '<small>🌅 twi</small>' : ''}</td>
+      ${altCell(h, 80)}${altCell(h, 120)}
+      <td class="${gc}"><b>${h.gust == null && h.w[alt] == null ? '–' : Math.round(g)}</b>${(h.w[alt] || 0) > (h.gust || 0) ? `<small>10 m: ${r0(h.gust)}</small>` : ''}</td>
+      <td class="${rc}"><b>${rainTop}</b><small>${rainSub}</small></td>
+      <td class="${vc}"><b>${h.vis == null ? '–' : h.vis >= 10 ? '10+' : h.vis.toFixed(1)}</b></td>
+      <td class="${cc}"><b>${fmtCeil(ceilShown(h))}</b></td>
+      <td class="${kc}"><b>${fmtKp(h.kp)}</b></td>
+      <td class="${lt ? lt.c : ''}"><b>${h.sun ? Math.max(0, Math.round(h.sun.el)) + '°' : '–'}</b><small>${lt ? lt.t : ''}</small></td>
+      <td class="st ${s.level}">${LABEL[s.level]}</td></tr>`;
+  }
+  $('hourly').innerHTML = lit.length ? html + '</tbody></table>' : '<div class="loading">No daylight forecast hours for this day.</div>';
+
+  // Chart: wind at 80/120 m and gusts, with limits, night/twilight shading, the tide curve and (today) measured wind.
+  const msg = $('wchartMsg'), chart = $('wchart');
+  if (!window.Plotly) { msg.innerHTML = '<div class="err">The chart library didn\'t load.</div>'; return; }
+  msg.innerHTML = '';
+  const x = dh.map(h => h.t);
+  const tide = interpolate(hilo, day);
+  const x0 = `${day} 00:00`, x1 = `${addDays(day, 1)} 00:00`;
+  const line = (y, color, name, width, dash) => ({ x, y, mode: 'lines', name, line: { color, width, dash, shape: 'spline' },
+    hovertemplate: `${name}: %{y:.0f} mph<extra></extra>` });
+  const traces = [
+    { x: tide.map(p => p.t), y: tide.map(p => p.v), yaxis: 'y2', mode: 'lines', name: 'Tide', fill: 'tozeroy',
+      fillcolor: cssVar('--tidefill'), line: { color: cssVar('--pred'), width: 1 }, opacity: 0.6,
+      hovertemplate: 'Tide: %{y:.1f} ft<extra></extra>' },
+    line(dh.map(h => h.w[80]), cssVar('--w80'), '80 m', alt === 80 ? 3 : 1.5),
+    line(dh.map(h => h.w[120]), cssVar('--w120'), '120 m', alt === 120 ? 3 : 1.5),
+    line(dh.map(h => h.gust), cssVar('--obs'), 'Gust (10 m)', 1.5, 'dot'),
+  ];
+  const obsToday = isToday && obs ? obs : null;
+  if (obsToday) {
+    traces.push(line(dh.map(h => h.w10), cssVar('--muted'), 'Forecast 10 m', 1, 'dash'));
+    traces.push({ x: obsToday.map(o => o.t), y: obsToday.map(o => o.s), mode: 'lines', name: 'Measured',
+      line: { color: cssVar('--text'), width: 1.3 }, hovertemplate: 'Measured: %{y:.0f} mph<extra></extra>' });
+  }
+  const limit = y => ({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: y, y1: y, line: { color: cssVar('--nogo'), width: 1, dash: 'dash' } });
+  const shapes = darkShapes(day, sun, civ, x0, x1).concat([limit(LIMITS.wind), limit(LIMITS.gust)]);
+  const annotations = [
+    { xref: 'paper', x: 0, y: LIMITS.wind, yanchor: 'bottom', xanchor: 'left', showarrow: false, text: `wind limit ${LIMITS.wind}`, font: { size: 10, color: cssVar('--nogo') } },
+    { xref: 'paper', x: 0, y: LIMITS.gust, yanchor: 'bottom', xanchor: 'left', showarrow: false, text: `gust limit ${LIMITS.gust}`, font: { size: 10, color: cssVar('--nogo') } },
+  ];
+  // Mark thunderstorm hours.
+  for (const h of dh) if (isThunder(h)) annotations.push({ x: h.t, y: 1, xref: 'x', yref: 'paper', yanchor: 'bottom', text: '⛈', showarrow: false, font: { size: 12 } });
+  if (isToday) shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: now.str, x1: now.str, y0: 0, y1: 1, line: { color: cssVar('--fall'), width: 1.5, dash: 'dash' } });
+  const allW = dh.map(h => Math.max(h.gust || 0, h.w[80] || 0, h.w[120] || 0)).concat(obsToday ? obsToday.map(o => o.s) : []);
+  const ymax = Math.max(LIMITS.gust + 5, ...allW.map(v => v + 3));
+  const tv = tide.map(p => p.v);
+  Plotly.react(chart, traces, {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: cssVar('--text'), family: 'system-ui, -apple-system, sans-serif' },
+    margin: { l: 40, r: 40, t: 28, b: 36 }, height: 300,
+    xaxis: { range: [x0, x1], tickformat: '%-I %p', dtick: 3 * 3600000, gridcolor: cssVar('--border'), fixedrange: true },
+    yaxis: { title: { text: 'mph' }, range: [0, ymax], gridcolor: cssVar('--border'), zeroline: false, fixedrange: true },
+    yaxis2: { title: { text: 'tide ft' }, overlaying: 'y', side: 'right', showgrid: false, fixedrange: true,
+      range: tv.length ? [Math.min(...tv) - 1, Math.max(...tv) * 2.2 + 1] : undefined },
+    legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.12 },
+    hovermode: 'x unified', shapes, annotations,
+  }, { displayModeBar: false, responsive: true });
+}
+
+// Plain-text summary of one day, for pasting into a text, email or field log.
+function planText(st, dayInfo, hours, hilo, alt, now) {
+  const day = dayInfo.day, [y, m, d] = parseIso(day);
+  const hm = s => fmtShort('0000-00-00 ' + s);
+  const span = p => `${fmtShort(msToStr(p.a))}–${fmtShort(msToStr(p.b))}`;
+  const L = [`Drone flight plan · ${st.name} · ${WD[weekday(day)]} ${MONTHS[m - 1]} ${d}, ${y} · ${alt} m (${ALT_FT[alt]} ft)`];
+  const runs = dayInfo.runs;
+  if (runs.length) {
+    L.push('Flight windows: ' + runs.map(x =>
+      (x.dayPart ? span(x.dayPart) : 'civil twilight only ' + x.tw.map(span).join(', ')) +
+      (x.dayPart && x.tw.length ? ` (+ civil twilight ${x.tw.map(span).join(', ')})` : '')).join('; '));
+  } else {
+    L.push('Flight windows: none' + (dayInfo.why.length ? ` (${dayInfo.why.join(', ')})` : ''));
+  }
+  const tides = hilo.filter(p => p.t.startsWith(day));
+  if (tides.length) L.push('Tides: ' + tides.map(p => `${isHigh(p) ? 'High' : 'Low'} ${fmtShort(p.t)} ${(+p.v).toFixed(1)} ft`).join(' · '));
+  // Conditions during the windows (or all daylight hours if there are none).
+  const inRuns = h => { const t = tsMs(h.t); return runs.some(x => t + 30 * 60000 > x.a && t - 30 * 60000 < x.b); };
+  const lit = h => { const mm = hmToMin(h.t.slice(11, 16)); return mm >= dayInfo.sun.riseMin && mm <= dayInfo.sun.setMin; };
+  const dh = hours.filter(h => h.t.startsWith(day));
+  const sel = runs.length ? dh.filter(inRuns) : dh.filter(lit);
+  const vals = f => sel.map(f).filter(v => v != null && isFinite(v));
+  const rng = a => a.length ? (Math.round(Math.min(...a)) === Math.round(Math.max(...a)) ? `${Math.round(a[0])}` : `${Math.round(Math.min(...a))}–${Math.round(Math.max(...a))}`) : '–';
+  if (sel.length) {
+    const w = vals(h => h.w[alt]), g = vals(h => Math.max(h.gust || 0, h.w[alt] || 0));
+    const vis = vals(h => h.vis), ceil = sel.map(ceilShown).filter(v => v != null), pop = vals(h => h.pop), kp = vals(h => h.kp), el = vals(h => h.sun ? h.sun.el : null);
+    const dirs = sel.map(h => compass(h.d[alt])).filter(Boolean);
+    const dir = dirs.sort((a, b) => dirs.filter(v => v === b).length - dirs.filter(v => v === a).length)[0] || '';
+    L.push(`${runs.length ? 'During windows' : 'Daylight'}: wind ${rng(w)} mph ${dir} at ${alt} m · max gust ${g.length ? Math.round(Math.max(...g)) : '–'} mph · ` +
+      `min visibility ${vis.length ? (Math.min(...vis) >= 10 ? '10+' : Math.min(...vis).toFixed(1)) : '–'} mi · ` +
+      `min ceiling ${ceil.length ? fmtCeil(Math.min(...ceil)) : '–'} ft · max rain chance ${pop.length ? Math.max(...pop) : '–'}% · ` +
+      `max Kp ${kp.length ? fmtKp(Math.max(...kp)) : '–'}${sel.some(isThunder) ? ' · THUNDERSTORMS forecast' : ''}`);
+    if (el.length) L.push(`Sun elevation ${rng(el.map(v => Math.max(0, v)))}°` + (() => {
+      const tags = [...new Set(sel.map(lightTag).filter(Boolean).map(t => t.t))];
+      return tags.length ? ` (${tags.join(', ')})` : '';
+    })());
+    const cau = [...new Set(sel.flatMap(h => hourStatus(h, alt).cau))];
+    if (cau.length) L.push('Cautions: ' + cau.join(', '));
+  }
+  L.push(`Sunrise ${hm(dayInfo.sun.rise)}, sunset ${hm(dayInfo.sun.set)} · civil dawn ${hm(dayInfo.civ.rise)}, dusk ${hm(dayInfo.civ.set)}`);
+  L.push(`Check before flight: LAANC/B4UFLY airspace, TFRs/NOTAMs, ${st.metar} METAR/TAF, 2,000 ft horizontal cloud clearance.`);
+  L.push(`Generated ${fmtShort(now.str)} ${now.date} from Open-Meteo, NOAA CO-OPS and NOAA SWPC forecasts.`);
+  return L.join('\n');
+}
+
+function copyText(t) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+  return new Promise((res, rej) => {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy') ? res() : rej(new Error('copy failed')); } catch (e) { rej(e); }
+    ta.remove();
+  });
+}
+
+// ---------- Drone: editable limits ----------
+const LIMIT_FIELDS = [
+  ['wind', 'Sustained wind at altitude', 'mph', 1, 60],
+  ['gust', 'Gusts', 'mph', 1, 80],
+  ['popCaution', 'Rain chance → caution', '%', 0, 100],
+  ['kp', 'Kp → caution at', 'Kp', 1, 9],
+  ['cape', 'Storm potential (CAPE) → caution', 'J/kg', 100, 5000],
+  ['lowSun', 'Long shadows below sun elevation', '°', 0, 45],
+  ['glintSun', 'Glint risk above sun elevation', '°', 20, 90],
+];
+function loadLimits() {
+  const saved = store.get('limits', {}) || {};
+  for (const [k, , , lo, hi] of LIMIT_FIELDS) {
+    const v = +saved[k];
+    LIMITS[k] = isFinite(v) && v >= lo && v <= hi ? v : DEFAULT_LIMITS[k];
+  }
+}
+function saveLimits() {
+  const o = {};
+  for (const [k] of LIMIT_FIELDS) o[k] = LIMITS[k];
+  store.set('limits', o);
+}
+function renderLimitsForm() {
+  $('limgrid').innerHTML = LIMIT_FIELDS.map(([k, label, unit, lo, hi]) =>
+    `<label class="lim"><span>${label}</span><span class="limin"><input type="number" inputmode="decimal" data-k="${k}" min="${lo}" max="${hi}" step="${k === 'cape' ? 100 : 1}" value="${LIMITS[k]}"><span class="sub">${unit}</span></span></label>`).join('');
+}
+function limitsChanged() {
+  saveLimits();
+  if (state.mode === 'drone') renderFlight();
+  renderFlightNow();
+}
+
+// Night shading plus separate (tinted) civil-twilight bands, for both graphs.
+function darkShapes(day, sun, civ, x0, x1) {
+  const band = (a, b, color) => ({ type: 'rect', xref: 'x', yref: 'paper', y0: 0, y1: 1, x0: a, x1: b, fillcolor: color, line: { width: 0 }, layer: 'below' });
+  const n = cssVar('--night'), t = cssVar('--twshade');
+  return [
+    band(x0, `${day} ${civ.rise}`, n), band(`${day} ${civ.rise}`, `${day} ${sun.rise}`, t),
+    band(`${day} ${sun.set}`, `${day} ${civ.set}`, t), band(`${day} ${civ.set}`, x1, n),
+  ];
+}
+
+// Switch between the tide dashboard and the drone flight view.
+// Tides is the default; the last choice is remembered, and #drone / #tides links open a view directly.
+function setMode(m) {
+  state.mode = m === 'drone' ? 'drone' : 'tides';
+  store.set('mode', state.mode);
+  document.body.classList.toggle('mode-drone', state.mode === 'drone');
+  for (const b of $('mode').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.m === state.mode);
+  $('h1').textContent = state.mode === 'drone' ? '🚁 Drone Flight Conditions' : '🌊 Tide Dashboard';
+  try { history.replaceState(null, '', '#' + state.mode); } catch (e) {}
+  if (state.mode === 'drone') { renderFlight(); renderFlightNow(); }
+  else {
+    if (state.tab === 'day') renderDay();
+    if (map) setTimeout(() => map.invalidateSize(), 0);
+  }
 }
 
 // ---------- Map ----------
@@ -640,10 +1353,16 @@ function init() {
   state.view = ['all', 'high', 'low'].includes(store.get('view', 'all')) ? store.get('view', 'all') : 'all';
   state.hiDay = !!store.get('hiDay', false);
   state.loDay = !!store.get('loDay', false);
+  const hash = location.hash.slice(1);
+  state.mode = hash === 'drone' || hash === 'tides' ? hash : store.get('mode', 'tides'); // tides by default
+  loadLimits();
+  state.alt = [80, 120].includes(store.get('alt', 120)) ? store.get('alt', 120) : 120;
+  state.tideF = store.get('tideF', 'any') === 'low' ? 'low' : 'any';
   state.tab = 'month';
   const t = stationNow(station().tz).date;
   [state.y, state.m] = parseIso(t);
   state.day = t;
+  state.fday = t;
 
   STATIONS.forEach((s, i) => $('station').add(new Option(s.name, i)));
   $('station').value = state.si;
@@ -654,8 +1373,9 @@ function init() {
 
   $('station').onchange = e => {
     state.si = +e.target.value; store.set('stationId', station().id);
-    renderMap(); renderNow(); renderMonth();
+    renderMap(); renderNow(); renderMonth(); renderFlightNow();
     if (state.tab === 'day') renderDay();
+    if (state.mode === 'drone') renderFlight();
   };
   $('month').onchange = e => setMonth(state.y, +e.target.value);
   $('year').onchange = e => setMonth(+e.target.value, state.m);
@@ -667,6 +1387,44 @@ function init() {
   $('dayInput').onchange = e => { if (e.target.value) setDay(e.target.value); };
   $('tab-month').onclick = () => showTab('month');
   $('tab-day').onclick = () => showTab('day');
+
+  // Drone controls
+  $('mode').onclick = e => { const b = e.target.closest('button[data-m]'); if (b && b.dataset.m !== state.mode) { setMode(b.dataset.m); window.scrollTo({ top: 0 }); } };
+  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if ((h === 'drone' || h === 'tides') && h !== state.mode) setMode(h); });
+  $('alt').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.alt = +b.dataset.a; store.set('alt', state.alt); renderFlight(); renderFlightNow();
+  };
+  $('tideF').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.tideF = b.dataset.t; store.set('tideF', state.tideF); renderFlight();
+  };
+  const pickFlightDay = e => {
+    const b = e.target.closest('[data-day]'); if (!b) return;
+    state.fday = b.dataset.day; renderFlight();
+    if (e.currentTarget.id === 'wins') $('daystrip').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  $('wins').onclick = pickFlightDay;
+  $('daystrip').onclick = pickFlightDay;
+
+  renderLimitsForm();
+  $('limgrid').onchange = e => {
+    const inp = e.target.closest('input[data-k]'); if (!inp) return;
+    const f = LIMIT_FIELDS.find(x => x[0] === inp.dataset.k), v = parseFloat(inp.value);
+    if (!f || !isFinite(v) || v < f[3] || v > f[4]) { inp.value = LIMITS[inp.dataset.k]; return; }
+    LIMITS[f[0]] = v;
+    limitsChanged();
+  };
+  $('limReset').onclick = () => { Object.assign(LIMITS, DEFAULT_LIMITS); renderLimitsForm(); limitsChanged(); };
+
+  $('copyPlan').onclick = () => {
+    const b = $('copyPlan'), label = '📋 Copy plan for this day';
+    if (!lastPlan) return;
+    copyText(lastPlan)
+      .then(() => { b.textContent = '✓ Copied'; })
+      .catch(() => { b.textContent = 'Copy failed'; })
+      .finally(() => setTimeout(() => { b.textContent = label; }, 2000));
+  };
 
   $('view').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -693,11 +1451,13 @@ function init() {
   renderMap();
   renderNow();
   renderMonth();
-  setInterval(renderNow, 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) renderNow(); });
+  setMode(state.mode);
+  const tick = () => { renderNow(); renderFlightNow(); };
+  setInterval(tick, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); if (state.mode === 'drone') renderFlight(); } });
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    if (mq.addEventListener) mq.addEventListener('change', () => { if (state.tab === 'day') renderDay(); });
+    if (mq.addEventListener) mq.addEventListener('change', () => { if (state.tab === 'day') renderDay(); if (state.mode === 'drone') renderFlight(); });
   }
 }
 
