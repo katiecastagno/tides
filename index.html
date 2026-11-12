@@ -158,14 +158,23 @@ tr.today .dw { color:var(--accent); }
 .chip b { margin-right:4px; }
 footer { margin-top:24px; font-size:.75rem; color:var(--muted); text-align:center; }
 
-/* Top-level view switch: Tides | Drone flight */
-.mode { display:grid; grid-template-columns:1fr 1fr; gap:0; margin:0 0 14px; border:1px solid var(--border);
+/* Top-level view switch: Tides | Drone flight | Boat */
+.mode { display:grid; grid-template-columns:repeat(3, 1fr); gap:0; margin:0 0 14px; border:1px solid var(--border);
   border-radius:12px; overflow:hidden; background:var(--card); }
 .mode button { border:0; border-radius:0; min-height:48px; font-size:1.02rem; font-weight:700; color:var(--muted); background:transparent; }
 .mode button + button { border-left:1px solid var(--border); }
 .mode button[aria-selected=true] { background:var(--accent); color:var(--on-accent); }
-body:not(.mode-drone) .drone-only, body.mode-drone .tides-only { display:none !important; }
-body.mode-drone .controls { grid-template-columns:1fr; }
+@media (max-width:440px) { .mode button { font-size:.88rem; padding:6px 4px; } }
+body:not(.mode-drone) .drone-only, body:not(.mode-boat) .boat-only,
+body.mode-drone .tides-only, body.mode-boat .tides-only { display:none !important; }
+body.mode-drone .controls, body.mode-boat .controls { grid-template-columns:1fr; }
+
+/* Boat survey windows */
+.badge.off { background:var(--stripe); color:var(--muted); font-size:.8rem; margin-left:4px; }
+.badge.inw { background:var(--accent-soft); color:var(--accent); font-size:.8rem; margin-left:4px; }
+#bchart { height:300px; }
+.wx tr.outwin td { opacity:.5; }
+.wx tr.inwin td:first-child { box-shadow:inset 4px 0 0 var(--pred); }
 
 /* Drone flight conditions */
 .fnow { margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
@@ -239,11 +248,12 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
 </head>
 <body>
 <div class="wrap">
-  <h1 id="h1">🌊 Tide & Wind Dashboard</h1>
+  <h1 id="h1">🌊 Tide Dashboard</h1>
 
   <div class="mode" id="mode" role="tablist" aria-label="Dashboard view">
     <button role="tab" data-m="tides">🌊 Tides</button>
-    <button role="tab" data-m="drone">🚁 Drone flight</button>
+    <button role="tab" data-m="drone">🚁 Drone</button>
+    <button role="tab" data-m="boat">🚤 Boat</button>
   </div>
 
   <div class="controls">
@@ -255,6 +265,7 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
 
   <div class="card now" id="now"><div class="loading">Loading current tide…</div></div>
   <div class="card fnow drone-only" id="fnow"></div>
+  <div class="card fnow boat-only" id="bnow"></div>
 
   <details class="card opts tides-only" id="opts" open>
     <summary>⚙️ View options &amp; station map</summary>
@@ -342,6 +353,36 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
       <li><b>2,000 ft horizontal clearance from clouds</b> can't be forecast. Check it by eye on site.</li>
       <li><b>🌅 Civil twilight</b> (sun 0–6° below the horizon) is shown separately in pink. Part 107 allows flying then only with anti-collision lighting visible for 3 statute miles. Windows that are daylight show the twilight minutes on either side as extras.</li>
       <li>Check airspace (LAANC / B4UFLY) and TFRs before every flight. Forecast from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>. Not a substitute for a preflight weather briefing.</li>
+    </ul>
+  </section>
+
+  <section id="panel-boat" class="boat-only">
+    <div class="sub limits" id="blimits"></div>
+
+    <details class="card limbox" id="blimbox">
+      <summary>⚙️ Edit boat limits <span class="sub">(saved on this device)</span></summary>
+      <div class="limgrid" id="blimgrid"></div>
+      <div class="sub">Thunderstorms are always NO-GO.</div>
+      <button id="blimReset">Reset to defaults</button>
+    </details>
+
+    <h3>Boat windows · next 7 days</h3>
+    <div class="wins" id="bwins"><div class="loading">Loading forecast…</div></div>
+
+    <div class="hbh"><h3>Hour by hour</h3><button id="bcopyPlan">📋 Copy plan for this day</button></div>
+    <div class="daystrip" id="bdaystrip"></div>
+    <div class="twbar" id="bsunbar"></div>
+    <div class="chartbox small"><div id="bchart"></div><div id="bchartMsg"></div></div>
+    <div id="bhourly"></div>
+
+    <ul class="notes">
+      <li><b>Windows</b> are daylight stretches (sunrise to sunset) within the set hours either side of each high tide, with no NO-GO hours. Rows outside the tide window are dimmed in the hourly table.</li>
+      <li><b>Wind</b> is the forecast at 10 m (boat height), in knots. Up to the ideal limit is GO. Between the ideal and max limits is <b>SHELTERED</b>: workable only at protected sites.</li>
+      <li><b>Gusts</b> above the caution limit are a CAUTION and above the no-go limit are NO-GO.</li>
+      <li><b>Thunderstorms</b> (⛈) are NO-GO. High CAPE (unstable air) is a CAUTION, since storms can pop up even when the hourly forecast shows none.</li>
+      <li><b>Visibility</b> under 1 nm (fog) is a CAUTION.</li>
+      <li><b>Measured wind</b> on the card above comes from the tide station's sensor, where it has one (Boston does).</li>
+      <li>Forecast from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>; tides from NOAA CO-OPS. Not a substitute for the NWS marine forecast and small craft advisories.</li>
     </ul>
   </section>
 
@@ -757,7 +798,7 @@ function getWx(st) {
   if (hit && Date.now() - hit.at < 15 * 60000) return hit.p; // refresh every 15 min
   const base = { latitude: st.lat, longitude: st.lon, timezone: st.tz, forecast_days: 7, timeformat: 'unixtime',
     wind_speed_unit: 'mph', precipitation_unit: 'inch' };
-  const basic = ['wind_speed_10m', 'wind_speed_80m', 'wind_speed_120m', 'wind_direction_80m', 'wind_direction_120m', 'wind_gusts_10m',
+  const basic = ['wind_speed_10m', 'wind_speed_80m', 'wind_speed_120m', 'wind_direction_10m', 'wind_direction_80m', 'wind_direction_120m', 'wind_gusts_10m',
     'precipitation', 'precipitation_probability', 'visibility', 'cloud_cover_low', 'cloud_cover', 'temperature_2m', 'dew_point_2m',
     'weather_code', 'cape'];
   const levels = LEVELS.flatMap(l => [`cloud_cover_${l}hPa`, `geopotential_height_${l}hPa`]);
@@ -798,6 +839,7 @@ function parseWx(j, st) {
       t: typeof t === 'number' ? local(t) : String(t).replace('T', ' '),
       utcMs,
       w10: col('wind_speed_10m')[i],
+      d10: col('wind_direction_10m')[i],
       w: { 80: col('wind_speed_80m')[i], 120: col('wind_speed_120m')[i] },
       d: { 80: col('wind_direction_80m')[i], 120: col('wind_direction_120m')[i] },
       gust: col('wind_gusts_10m')[i],
@@ -1284,6 +1326,324 @@ function limitsChanged() {
   renderFlightNow();
 }
 
+// ---------- Boat survey windows ----------
+// Opposite of the drone: surveys want high tide. Wind is the 10 m forecast, in knots.
+const MPH_TO_KT = 1 / 1.15078; // also statute miles → nautical miles
+const kt = mph => mph == null ? null : mph * MPH_TO_KT;
+const BOAT_DEFAULTS = {
+  windGo: 10,      // kt sustained: ideal, GO anywhere
+  windMax: 15,     // kt sustained: above windGo up to this = sheltered sites only
+  gustCau: 20,     // kt gusts → caution
+  gustMax: 25,     // kt gusts → no-go
+  hrs: 2,          // window is ± this many hours around each high tide
+  popCaution: 40,  // % chance of precipitation → caution
+};
+const BOAT_FIXED = { visNm: 1, cape: 1000 };
+const BOAT = Object.assign({}, BOAT_DEFAULTS);
+const BOAT_FIELDS = [
+  ['windGo', 'Ideal wind (GO) up to', 'kt', 1, 40, 1],
+  ['windMax', 'Max wind, sheltered sites', 'kt', 1, 50, 1],
+  ['gustCau', 'Gusts → caution above', 'kt', 1, 60, 1],
+  ['gustMax', 'Gusts → no-go above', 'kt', 1, 70, 1],
+  ['hrs', 'Window around high tide (±)', 'h', 0.5, 6, 0.5],
+  ['popCaution', 'Rain chance → caution', '%', 0, 100, 1],
+];
+function loadBoatLimits() {
+  const saved = store.get('boatLimits', {}) || {};
+  for (const [k, , , lo, hi] of BOAT_FIELDS) {
+    const v = +saved[k];
+    BOAT[k] = isFinite(v) && v >= lo && v <= hi ? v : BOAT_DEFAULTS[k];
+  }
+}
+function saveBoatLimits() {
+  const o = {};
+  for (const [k] of BOAT_FIELDS) o[k] = BOAT[k];
+  store.set('boatLimits', o);
+}
+function renderBoatLimitsForm() {
+  $('blimgrid').innerHTML = BOAT_FIELDS.map(([k, label, unit, lo, hi, step]) =>
+    `<label class="lim"><span>${label}</span><span class="limin"><input type="number" inputmode="decimal" data-k="${k}" min="${lo}" max="${hi}" step="${step}" value="${BOAT[k]}"><span class="sub">${unit}</span></span></label>`).join('');
+}
+function boatLimitsChanged() {
+  saveBoatLimits();
+  if (state.mode === 'boat') { renderBoat(); renderBoatNow(); }
+}
+
+const shelterMsg = () => `wind ${BOAT.windGo}–${BOAT.windMax} kt: sheltered sites only`;
+// Go / caution / no-go for one forecast hour.
+function boatStatus(h) {
+  const nogo = [], cau = [];
+  const w = kt(h.w10), g = kt(h.gust);
+  if (w == null) cau.push('no wind data');
+  else if (w > BOAT.windMax) nogo.push(`wind over ${BOAT.windMax} kt`);
+  else if (w > BOAT.windGo) cau.push(shelterMsg());
+  if (g != null) {
+    if (g > BOAT.gustMax) nogo.push(`gusts over ${BOAT.gustMax} kt`);
+    else if (g > BOAT.gustCau) cau.push(`gusts over ${BOAT.gustCau} kt`);
+  }
+  if (isThunder(h)) nogo.push('thunderstorm');
+  else if (h.cape != null && h.cape >= BOAT_FIXED.cape) cau.push('storms possible (unstable air)');
+  if (h.pop != null && h.pop >= BOAT.popCaution) cau.push(`≥${BOAT.popCaution}% rain chance`);
+  const vnm = h.vis == null ? null : h.vis * MPH_TO_KT;
+  if (vnm != null && vnm < BOAT_FIXED.visNm) cau.push('fog / visibility under 1 nm');
+  return { level: nogo.length ? 'nogo' : cau.length ? 'cau' : 'go', nogo, cau, w, g, vnm };
+}
+// "SHELTERED" when moderate wind is the only concern.
+const boatLabel = (level, cau) => level === 'cau' && cau.length === 1 && cau[0] === shelterMsg() ? 'SHELTERED' : LABEL[level];
+
+function tideAt(hilo, ms) {
+  for (let i = 0; i < hilo.length - 1; i++) {
+    if (ms >= tsMs(hilo[i].t) && ms <= tsMs(hilo[i + 1].t)) return cosineAt(hilo[i], hilo[i + 1], ms);
+  }
+  return null;
+}
+function topDir(degs) {
+  const ds = degs.map(compass).filter(Boolean);
+  const n = {}; for (const d of ds) n[d] = (n[d] || 0) + 1;
+  return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || '';
+}
+const fmtH = h => `${h} h`;
+const rngTxt = a => !a.length ? '–' : Math.round(Math.min(...a)) === Math.round(Math.max(...a)) ? `${Math.round(a[0])}` : `${Math.round(Math.min(...a))}–${Math.round(Math.max(...a))}`;
+
+// Boat windows: daylight stretches within ±BOAT.hrs of each high tide with no no-go hours.
+function boatWindows(hours, hilo, st, nowMs) {
+  const days = [...new Set(hours.map(h => h.t.slice(0, 10)))];
+  const highs = hilo.filter(isHigh), N = BOAT.hrs * 3600000;
+  return days.map(day => {
+    const sun = sunTimes(day, st.lat, st.lon, st.tz), civ = sunTimes(day, st.lat, st.lon, st.tz, -6);
+    const s0 = tsMs(`${day} ${sun.rise}`), s1 = tsMs(`${day} ${sun.set}`);
+    const segs = hours.filter(h => h.t.startsWith(day)).map(h => {
+      const m = tsMs(h.t);
+      return { a: m - 30 * 60000, b: m + 30 * 60000, h, s: boatStatus(h) };
+    });
+    const dayHighs = highs.filter(p => p.t.startsWith(day));
+    const runs = [], dark = [], counts = {};
+    for (const H of dayHighs) {
+      const hm = tsMs(H.t);
+      if (hm + N <= s0 || hm - N >= s1) { dark.push(H); continue; }
+      const a = Math.max(hm - N, s0, nowMs || 0), b = Math.min(hm + N, s1);
+      if (b - a < 30 * 60000) continue; // already past
+      let cur = null;
+      const cut = new Set(), mine = [];
+      for (const g of segs) {
+        if (g.b <= a || g.a >= b) continue;
+        if (g.s.level === 'nogo') { for (const r of g.s.nogo) { counts[r] = (counts[r] || 0) + 1; cut.add(r); } cur = null; continue; }
+        const ga = Math.max(g.a, a), gb = Math.min(g.b, b);
+        if (cur && ga <= cur.b) { cur.b = gb; cur.hs.push(g); }
+        else { cur = { a: ga, b: gb, hs: [g], high: H }; runs.push(cur); mine.push(cur); }
+      }
+      for (const x of mine) x.cut = [...cut]; // no-go reasons that shortened this high-tide window
+    }
+    const out = runs.filter(x => x.b - x.a >= 30 * 60000).map(x => Object.assign(x, {
+      cau: [...new Set(x.hs.flatMap(g => g.s.cau))],
+      ws: x.hs.map(g => g.s.w).filter(v => v != null),
+      gs: x.hs.map(g => g.s.g).filter(v => v != null),
+      dir: topDir(x.hs.map(g => g.h.d10)),
+      storm: x.hs.some(g => isThunder(g.h)),
+    }));
+    let why = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 2);
+    if (!out.length && !why.length) {
+      if (dayHighs.length && dark.length === dayHighs.length) why = ['high tides are after dark'];
+      else if (!segs.length) why = ['no forecast yet'];
+      else if (nowMs && day === msToStr(nowMs).slice(0, 10)) why = ['no high-tide window left today'];
+    }
+    const best = out.some(x => !x.cau.length) ? 'go' : out.length ? 'cau' : 'nogo';
+    return { day, runs: out, best, why, sun, civ, dayHighs, dark };
+  });
+}
+
+let boatTok = 0, lastBoatPlan = '';
+async function renderBoat() {
+  const tok = ++boatTok, st = station();
+  $('blimits').textContent = `GO when: within ±${fmtH(BOAT.hrs)} of high tide, sunrise–sunset · wind ≤ ${BOAT.windGo} kt · gusts ≤ ${BOAT.gustCau} kt · no thunderstorms. SHELTERED with wind ${BOAT.windGo}–${BOAT.windMax} kt. CAUTION with gusts ${BOAT.gustCau}–${BOAT.gustMax} kt, ≥${BOAT.popCaution}% rain chance, unstable air or fog. NO-GO with wind > ${BOAT.windMax} kt, gusts > ${BOAT.gustMax} kt or any thunderstorm.`;
+  const now = stationNow(st.tz);
+  let hours, hilo;
+  try {
+    [hours, hilo] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 8))]);
+  } catch (err) {
+    if (tok === boatTok) showError($('bwins'), err, renderBoat);
+    return;
+  }
+  if (tok !== boatTok) return;
+
+  const days = boatWindows(hours, hilo, st, tsMs(now.str));
+  if (!days.some(d => d.day === state.bday)) state.bday = days[0].day;
+  const dayName = d => d === now.date ? 'Today' : `${WD[weekday(d)]} ${+d.slice(8)}`;
+  const span = x => `${fmtShort(msToStr(x.a))} – ${fmtShort(msToStr(x.b))}`;
+
+  $('bwins').innerHTML = days.map(d => {
+    if (!d.runs.length) {
+      const darkTxt = d.dark.length && d.dark.length < d.dayHighs.length ? '' :
+        d.dark.map(H => `High ${fmtShort(H.t)} (dark)`).join(' · ');
+      const why = [d.why.join(', '), darkTxt && !d.why.includes('high tides are after dark') ? darkTxt : ''].filter(Boolean).join(' · ');
+      return `<button class="win none" data-day="${d.day}"><span class="wd">${dayName(d.day)}</span><span class="wt">No window</span><span class="wn">${esc(why)}</span></button>`;
+    }
+    return d.runs.map((x, i) => {
+      const lbl = boatLabel(x.cau.length ? 'cau' : 'go', x.cau);
+      const notes = [
+        `High ${fmtShort(x.high.t)} ${(+x.high.v).toFixed(1)} ft`,
+        `wind ${rngTxt(x.ws)} kt ${x.dir}${x.gs.length ? `, gust ${Math.round(Math.max(...x.gs))}` : ''}`,
+        x.cau.length ? `<span class="c">⚠ ${esc(x.cau.join(', '))}</span>` : '',
+        x.cut.length ? `<span class="c">✂ cut short by ${esc(x.cut.join(', '))}</span>` : '',
+      ].filter(Boolean).join(' · ');
+      return `
+      <button class="win ${x.cau.length ? 'cau' : 'go'}" data-day="${d.day}">
+        <span class="wd">${i === 0 ? dayName(d.day) : ''}</span>
+        <span class="wt">${span(x)} <span class="sub">(${fmtDur((x.b - x.a) / 60000)}) · ${lbl}</span></span>
+        <span class="wn">${notes}</span>
+      </button>`;
+    }).join('');
+  }).join('');
+
+  $('bdaystrip').innerHTML = days.map(d =>
+    `<button data-day="${d.day}" aria-pressed="${d.day === state.bday}">${dayName(d.day)}<span class="dot ${d.best}"></span></button>`).join('');
+
+  const dayInfo = days.find(d => d.day === state.bday);
+  renderBoatDay(hours, hilo, dayInfo, now);
+  lastBoatPlan = boatPlanText(st, dayInfo, hours, hilo, now);
+}
+
+function renderBoatDay(hours, hilo, dayInfo, now) {
+  const day = dayInfo.day, sun = dayInfo.sun, civ = dayInfo.civ, N = BOAT.hrs * 3600000;
+  const dh = hours.filter(h => h.t.startsWith(day));
+  const nowMs = tsMs(now.str), isToday = day === now.date;
+  const hm = s => fmtShort('0000-00-00 ' + s);
+  const highs = hilo.filter(isHigh);
+  const inTide = ms => highs.some(H => Math.abs(tsMs(H.t) - ms) <= N);
+  $('bsunbar').innerHTML = `<span class="muted">Sunrise ${hm(sun.rise)}, sunset ${hm(sun.set)}</span> · ` +
+    (dayInfo.dayHighs.length ? dayInfo.dayHighs.map(H => {
+      const m = tsMs(H.t);
+      return `High ${fmtShort(H.t)} ${(+H.v).toFixed(1)} ft <span class="muted">(±${fmtH(BOAT.hrs)}: ${fmtShort(msToStr(m - N))}–${fmtShort(msToStr(m + N))})</span>`;
+    }).join(' · ') : 'no high tide this day');
+
+  // Hourly table, sunrise to sunset; hours outside the tide window dimmed.
+  const lit = dh.filter(h => { const m = hmToMin(h.t.slice(11, 16)); return m + 30 >= sun.riseMin && m - 30 <= sun.setMin; });
+  let html = `<table class="wx"><thead><tr><th>Time</th><th>Tide<br>ft</th><th>Wind<br>kt</th><th>Gust<br>kt</th><th>Rain</th><th>Vis<br>nm</th><th>Boat</th></tr></thead><tbody>`;
+  for (const h of lit) {
+    const s = boatStatus(h), m = tsMs(h.t), tide = tideAt(hilo, m), inw = inTide(m);
+    const wc = s.w == null ? '' : s.w > BOAT.windMax ? 'nogo' : s.w > BOAT.windGo ? 'cau' : 'go';
+    const gc = s.g == null ? '' : s.g > BOAT.gustMax ? 'nogo' : s.g > BOAT.gustCau ? 'cau' : 'go';
+    const storm = isThunder(h), unstable = !storm && h.cape != null && h.cape >= BOAT_FIXED.cape;
+    const rc = storm ? 'nogo' : unstable || (h.pop != null && h.pop >= BOAT.popCaution) ? 'cau' : '';
+    const rainTop = storm ? '⛈' : h.pop == null ? '–' : h.pop + '%';
+    const rainSub = storm ? (h.pop == null ? '' : h.pop + '%') : unstable ? '⚡ unstable' : h.precip ? h.precip.toFixed(2) + '"' : '';
+    const vc = s.vnm == null ? '' : s.vnm < BOAT_FIXED.visNm ? 'cau' : 'go';
+    const past = m + 30 * 60000 < nowMs;
+    html += `<tr class="${inw ? 'inwin' : 'outwin'}${past ? ' past' : ''}" title="${esc((inw ? '' : 'outside high-tide window · ') + s.nogo.concat(s.cau).join(' · '))}">
+      <td><b>${fmtShort(h.t).replace(':00', '')}</b>${inw ? '<small>high tide</small>' : ''}</td>
+      <td><b>${tide == null ? '–' : tide.toFixed(1)}</b></td>
+      <td class="${wc}"><b>${r0(s.w)}</b><small>${compass(h.d10)}</small></td>
+      <td class="${gc}"><b>${r0(s.g)}</b></td>
+      <td class="${rc}"><b>${rainTop}</b><small>${rainSub}</small></td>
+      <td class="${vc}"><b>${s.vnm == null ? '–' : s.vnm >= 10 ? '10+' : s.vnm.toFixed(1)}</b></td>
+      <td class="st ${s.level}">${boatLabel(s.level, s.cau)}</td></tr>`;
+  }
+  $('bhourly').innerHTML = lit.length ? html + '</tbody></table>' : '<div class="loading">No daylight forecast hours for this day.</div>';
+
+  // Chart: 10 m wind and gusts in knots, limit lines, high-tide windows shaded, tide curve.
+  const msg = $('bchartMsg'), chart = $('bchart');
+  if (!window.Plotly) { msg.innerHTML = '<div class="err">The chart library didn\'t load.</div>'; return; }
+  msg.innerHTML = '';
+  const x = dh.map(h => h.t), tide = interpolate(hilo, day);
+  const x0 = `${day} 00:00`, x1 = `${addDays(day, 1)} 00:00`;
+  const traces = [
+    { x: tide.map(p => p.t), y: tide.map(p => p.v), yaxis: 'y2', mode: 'lines', name: 'Tide', fill: 'tozeroy',
+      fillcolor: cssVar('--tidefill'), line: { color: cssVar('--pred'), width: 1 }, opacity: 0.6,
+      hovertemplate: 'Tide: %{y:.1f} ft<extra></extra>' },
+    { x, y: dh.map(h => kt(h.w10)), mode: 'lines', name: 'Wind (10 m)', line: { color: cssVar('--w80'), width: 3, shape: 'spline' },
+      hovertemplate: 'Wind: %{y:.0f} kt<extra></extra>' },
+    { x, y: dh.map(h => kt(h.gust)), mode: 'lines', name: 'Gust', line: { color: cssVar('--obs'), width: 1.5, dash: 'dot', shape: 'spline' },
+      hovertemplate: 'Gust: %{y:.0f} kt<extra></extra>' },
+  ];
+  const band = (a, b, color) => ({ type: 'rect', xref: 'x', yref: 'paper', y0: 0, y1: 1, x0: a, x1: b, fillcolor: color, line: { width: 0 }, layer: 'below' });
+  const limit = (y, c) => ({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: y, y1: y, line: { color: cssVar(c), width: 1, dash: 'dash' } });
+  const shapes = darkShapes(day, sun, civ, x0, x1);
+  for (const H of dayInfo.dayHighs) { const m = tsMs(H.t); shapes.push(band(msToStr(m - N), msToStr(m + N), cssVar('--accent-soft'))); }
+  for (const r of dayInfo.runs) shapes.push(band(msToStr(r.a), msToStr(r.b), cssVar(r.cau.length ? '--cau-bg' : '--go-bg')));
+  shapes.push(limit(BOAT.windGo, '--cau'), limit(BOAT.windMax, '--nogo'));
+  const annotations = [
+    { xref: 'paper', x: 0, y: BOAT.windGo, yanchor: 'bottom', xanchor: 'left', showarrow: false, text: `ideal ${BOAT.windGo} kt`, font: { size: 10, color: cssVar('--cau') } },
+    { xref: 'paper', x: 0, y: BOAT.windMax, yanchor: 'bottom', xanchor: 'left', showarrow: false, text: `sheltered max ${BOAT.windMax} kt`, font: { size: 10, color: cssVar('--nogo') } },
+  ];
+  for (const h of dh) if (isThunder(h)) annotations.push({ x: h.t, y: 1, xref: 'x', yref: 'paper', yanchor: 'bottom', text: '⛈', showarrow: false, font: { size: 12 } });
+  if (isToday) shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: now.str, x1: now.str, y0: 0, y1: 1, line: { color: cssVar('--fall'), width: 1.5, dash: 'dash' } });
+  const allW = dh.map(h => Math.max(kt(h.gust) || 0, kt(h.w10) || 0));
+  const ymax = Math.max(BOAT.windMax + 5, ...allW.map(v => v + 3));
+  const tv = tide.map(p => p.v);
+  Plotly.react(chart, traces, {
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    font: { color: cssVar('--text'), family: 'system-ui, -apple-system, sans-serif' },
+    margin: { l: 40, r: 40, t: 28, b: 36 }, height: 300,
+    xaxis: { range: [x0, x1], tickformat: '%-I %p', dtick: 3 * 3600000, gridcolor: cssVar('--border'), fixedrange: true },
+    yaxis: { title: { text: 'kt' }, range: [0, ymax], gridcolor: cssVar('--border'), zeroline: false, fixedrange: true },
+    yaxis2: { title: { text: 'tide ft' }, overlaying: 'y', side: 'right', showgrid: false, fixedrange: true,
+      range: tv.length ? [Math.min(...tv) - 1, Math.max(...tv) * 1.6 + 1] : undefined },
+    legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.12 },
+    hovermode: 'x unified', shapes, annotations,
+  }, { displayModeBar: false, responsive: true });
+}
+
+function boatPlanText(st, dayInfo, hours, hilo, now) {
+  const day = dayInfo.day, [y, m, d] = parseIso(day);
+  const hm = s => fmtShort('0000-00-00 ' + s);
+  const span = p => `${fmtShort(msToStr(p.a))}–${fmtShort(msToStr(p.b))}`;
+  const L = [`Boat survey plan · ${st.name} · ${WD[weekday(day)]} ${MONTHS[m - 1]} ${d}, ${y}`];
+  const runs = dayInfo.runs;
+  L.push(runs.length
+    ? 'Windows: ' + runs.map(x => `${span(x)} ${boatLabel(x.cau.length ? 'cau' : 'go', x.cau)} (high ${fmtShort(x.high.t)} ${(+x.high.v).toFixed(1)} ft${x.cut.length ? '; cut short by ' + x.cut.join(', ') : ''})`).join('; ')
+    : 'Windows: none' + (dayInfo.why.length ? ` (${dayInfo.why.join(', ')})` : ''));
+  const tides = hilo.filter(p => p.t.startsWith(day));
+  if (tides.length) L.push('Tides: ' + tides.map(p => `${isHigh(p) ? 'High' : 'Low'} ${fmtShort(p.t)} ${(+p.v).toFixed(1)} ft`).join(' · '));
+  if (runs.length) {
+    const hs = runs.flatMap(x => x.hs);
+    const ws = runs.flatMap(x => x.ws), gs = runs.flatMap(x => x.gs);
+    L.push(`During windows: wind ${rngTxt(ws)} kt ${topDir(hs.map(g => g.h.d10))} · max gust ${gs.length ? Math.round(Math.max(...gs)) : '–'} kt`);
+    const cau = [...new Set(runs.flatMap(x => x.cau))];
+    if (cau.length) L.push('Cautions: ' + cau.join(', '));
+  }
+  if (hours.some(h => h.t.startsWith(day) && isThunder(h))) L.push('THUNDERSTORMS forecast this day.');
+  L.push(`Sunrise ${hm(dayInfo.sun.rise)}, sunset ${hm(dayInfo.sun.set)}`);
+  L.push('Check the NWS marine forecast and small craft advisories before heading out.');
+  L.push(`Generated ${fmtShort(now.str)} ${now.date} from Open-Meteo and NOAA CO-OPS forecasts.`);
+  return L.join('\n');
+}
+
+// "Boat now" card: conditions this hour plus whether we're in a high-tide window.
+let bnowTok = 0;
+async function renderBoatNow() {
+  if (state.mode !== 'boat') return;
+  const el = $('bnow'), tok = ++bnowTok, st = station(), now = stationNow(st.tz);
+  let hours, hilo, obs;
+  try {
+    [hours, hilo, obs] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 2)), getObsWind(st)]);
+  } catch (err) { if (tok === bnowTok) el.innerHTML = `<span class="err" style="padding:0">Couldn't load forecast (${esc(err.message)}).</span>`; return; }
+  if (tok !== bnowTok) return;
+  const h = hours.find(x => x.t.startsWith(now.str.slice(0, 13)));
+  if (!h) { el.innerHTML = '<span class="muted">No forecast for this hour.</span>'; return; }
+  const s = boatStatus(h), nowMs = tsMs(now.str), N = BOAT.hrs * 3600000;
+  const highs = hilo.filter(isHigh);
+  const cur = highs.find(H => Math.abs(tsMs(H.t) - nowMs) <= N);
+  const next = highs.find(H => tsMs(H.t) - N > nowMs);
+  const sun = sunTimes(now.date, st.lat, st.lon, st.tz), mm = hmToMin(now.str.slice(11, 16));
+  const dark = mm < sun.riseMin || mm > sun.setMin;
+  const tideTxt = cur
+    ? `🌊 In high-tide window: high ${fmtShort(cur.t)} ${(+cur.v).toFixed(1)} ft, window ends ${fmtShort(msToStr(tsMs(cur.t) + N))}`
+    : next ? `🌊 Next high-tide window ${fmtShort(msToStr(tsMs(next.t) - N))}–${fmtShort(msToStr(tsMs(next.t) + N))}${next.t.slice(0, 10) !== now.date ? ' ' + WD[weekday(next.t.slice(0, 10))] : ''} (high ${fmtShort(next.t)})` : '';
+  let meas = '';
+  if (obs) {
+    const last = obs[obs.length - 1];
+    if (nowMs - tsMs(last.t) <= 90 * 60000) meas = ` · measured ${r0(kt(last.s))} kt ${compass(last.d)}${last.g != null ? `, gust ${r0(kt(last.g))}` : ''}`;
+  }
+  const reasons = s.nogo.concat(s.cau);
+  el.innerHTML = `
+    <div><div class="k">🚤 Weather now</div><span class="badge ${s.level}">${boatLabel(s.level, s.cau)}</span>${dark ? '<span class="badge off">DARK</span>' : cur ? '<span class="badge inw">HIGH TIDE</span>' : '<span class="badge off">OUTSIDE TIDE WINDOW</span>'}</div>
+    <div class="why">
+      <div>Wind ${r0(s.w)} kt ${compass(h.d10)} · gust ${r0(s.g)} kt${isThunder(h) ? ' · ⛈' : ''}${meas}</div>
+      ${reasons.length ? `<div class="sub">${esc(reasons.join(' · '))}</div>` : ''}
+      ${tideTxt ? `<div class="sub">${tideTxt}</div>` : ''}
+    </div>`;
+}
+
 // Night shading plus separate (tinted) civil-twilight bands, for both graphs.
 function darkShapes(day, sun, civ, x0, x1) {
   const band = (a, b, color) => ({ type: 'rect', xref: 'x', yref: 'paper', y0: 0, y1: 1, x0: a, x1: b, fillcolor: color, line: { width: 0 }, layer: 'below' });
@@ -1296,14 +1656,17 @@ function darkShapes(day, sun, civ, x0, x1) {
 
 // Switch between the tide dashboard and the drone flight view.
 // Tides is the default; the last choice is remembered, and #drone / #tides links open a view directly.
+const MODES = ['tides', 'drone', 'boat'];
 function setMode(m) {
-  state.mode = m === 'drone' ? 'drone' : 'tides';
+  state.mode = MODES.includes(m) ? m : 'tides';
   store.set('mode', state.mode);
   document.body.classList.toggle('mode-drone', state.mode === 'drone');
+  document.body.classList.toggle('mode-boat', state.mode === 'boat');
   for (const b of $('mode').querySelectorAll('button')) b.setAttribute('aria-selected', b.dataset.m === state.mode);
-  $('h1').textContent = state.mode === 'drone' ? '🚁 Drone Flight Conditions' : '🌊 Tide Dashboard';
+  $('h1').textContent = { tides: '🌊 Tide Dashboard', drone: '🚁 Drone Flight Conditions', boat: '🚤 Boat Survey Windows' }[state.mode];
   try { history.replaceState(null, '', '#' + state.mode); } catch (e) {}
   if (state.mode === 'drone') { renderFlight(); renderFlightNow(); }
+  else if (state.mode === 'boat') { renderBoat(); renderBoatNow(); }
   else {
     if (state.tab === 'day') renderDay();
     if (map) setTimeout(() => map.invalidateSize(), 0);
@@ -1354,8 +1717,9 @@ function init() {
   state.hiDay = !!store.get('hiDay', false);
   state.loDay = !!store.get('loDay', false);
   const hash = location.hash.slice(1);
-  state.mode = hash === 'drone' || hash === 'tides' ? hash : store.get('mode', 'tides'); // tides by default
+  state.mode = MODES.includes(hash) ? hash : store.get('mode', 'tides'); // tides by default
   loadLimits();
+  loadBoatLimits();
   state.alt = [80, 120].includes(store.get('alt', 120)) ? store.get('alt', 120) : 120;
   state.tideF = store.get('tideF', 'any') === 'low' ? 'low' : 'any';
   state.tab = 'month';
@@ -1363,6 +1727,7 @@ function init() {
   [state.y, state.m] = parseIso(t);
   state.day = t;
   state.fday = t;
+  state.bday = t;
 
   STATIONS.forEach((s, i) => $('station').add(new Option(s.name, i)));
   $('station').value = state.si;
@@ -1373,9 +1738,10 @@ function init() {
 
   $('station').onchange = e => {
     state.si = +e.target.value; store.set('stationId', station().id);
-    renderMap(); renderNow(); renderMonth(); renderFlightNow();
+    renderMap(); renderNow(); renderMonth(); renderFlightNow(); renderBoatNow();
     if (state.tab === 'day') renderDay();
     if (state.mode === 'drone') renderFlight();
+    if (state.mode === 'boat') renderBoat();
   };
   $('month').onchange = e => setMonth(state.y, +e.target.value);
   $('year').onchange = e => setMonth(+e.target.value, state.m);
@@ -1390,7 +1756,7 @@ function init() {
 
   // Drone controls
   $('mode').onclick = e => { const b = e.target.closest('button[data-m]'); if (b && b.dataset.m !== state.mode) { setMode(b.dataset.m); window.scrollTo({ top: 0 }); } };
-  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if ((h === 'drone' || h === 'tides') && h !== state.mode) setMode(h); });
+  window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (MODES.includes(h) && h !== state.mode) setMode(h); });
   $('alt').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     state.alt = +b.dataset.a; store.set('alt', state.alt); renderFlight(); renderFlightNow();
@@ -1426,6 +1792,32 @@ function init() {
       .finally(() => setTimeout(() => { b.textContent = label; }, 2000));
   };
 
+  // Boat controls
+  const pickBoatDay = e => {
+    const b = e.target.closest('[data-day]'); if (!b) return;
+    state.bday = b.dataset.day; renderBoat();
+    if (e.currentTarget.id === 'bwins') $('bdaystrip').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  $('bwins').onclick = pickBoatDay;
+  $('bdaystrip').onclick = pickBoatDay;
+  renderBoatLimitsForm();
+  $('blimgrid').onchange = e => {
+    const inp = e.target.closest('input[data-k]'); if (!inp) return;
+    const f = BOAT_FIELDS.find(x => x[0] === inp.dataset.k), v = parseFloat(inp.value);
+    if (!f || !isFinite(v) || v < f[3] || v > f[4]) { inp.value = BOAT[inp.dataset.k]; return; }
+    BOAT[f[0]] = v;
+    boatLimitsChanged();
+  };
+  $('blimReset').onclick = () => { Object.assign(BOAT, BOAT_DEFAULTS); renderBoatLimitsForm(); boatLimitsChanged(); };
+  $('bcopyPlan').onclick = () => {
+    const b = $('bcopyPlan'), label = '📋 Copy plan for this day';
+    if (!lastBoatPlan) return;
+    copyText(lastBoatPlan)
+      .then(() => { b.textContent = '✓ Copied'; })
+      .catch(() => { b.textContent = 'Copy failed'; })
+      .finally(() => setTimeout(() => { b.textContent = label; }, 2000));
+  };
+
   $('view').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     state.view = b.dataset.v; store.set('view', state.view); syncOpts(); renderMonth();
@@ -1452,12 +1844,12 @@ function init() {
   renderNow();
   renderMonth();
   setMode(state.mode);
-  const tick = () => { renderNow(); renderFlightNow(); };
+  const tick = () => { renderNow(); renderFlightNow(); renderBoatNow(); };
   setInterval(tick, 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); if (state.mode === 'drone') renderFlight(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); if (state.mode === 'drone') renderFlight(); if (state.mode === 'boat') renderBoat(); } });
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    if (mq.addEventListener) mq.addEventListener('change', () => { if (state.tab === 'day') renderDay(); if (state.mode === 'drone') renderFlight(); });
+    if (mq.addEventListener) mq.addEventListener('change', () => { if (state.tab === 'day') renderDay(); if (state.mode === 'drone') renderFlight(); if (state.mode === 'boat') renderBoat(); });
   }
 }
 
