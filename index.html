@@ -173,6 +173,16 @@ body.mode-drone .controls, body.mode-boat .controls { grid-template-columns:1fr;
 .badge.off { background:var(--stripe); color:var(--muted); font-size:.8rem; margin-left:4px; }
 .badge.inw { background:var(--accent-soft); color:var(--accent); font-size:.8rem; margin-left:4px; }
 #bchart { height:300px; }
+.mbanner { margin:0 0 10px; padding:10px 12px; border-radius:10px; border:1px solid var(--border); font-size:.88rem; background:var(--card); }
+.mbanner[hidden] { display:none; }
+.mbanner.nogo { background:var(--nogo-bg); border-color:var(--nogo); }
+.mbanner.cau { background:var(--cau-bg); border-color:var(--cau); }
+.mbanner.ok { color:var(--muted); background:none; border:0; padding:2px 0; }
+.mbanner details { margin:4px 0; }
+.mbanner summary { cursor:pointer; }
+.mbanner .ev.nogo { color:var(--nogo); } .mbanner .ev.cau { color:var(--cau); }
+.mbanner .desc { white-space:pre-wrap; font-size:.8rem; margin:6px 0 2px; color:var(--text); }
+.mbanner .chk { margin-top:6px; font-size:.82rem; }
 .wx tr.outwin td { opacity:.5; }
 .wx tr.inwin td:first-child { box-shadow:inset 4px 0 0 var(--pred); }
 
@@ -357,12 +367,14 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
   </section>
 
   <section id="panel-boat" class="boat-only">
+    <div class="mbanner" id="balerts" hidden></div>
     <div class="sub limits" id="blimits"></div>
 
     <details class="card limbox" id="blimbox">
       <summary>⚙️ Edit boat limits <span class="sub">(saved on this device)</span></summary>
       <div class="limgrid" id="blimgrid"></div>
-      <div class="sub">Thunderstorms are always NO-GO.</div>
+      <label class="chk"><input type="checkbox" id="bScaNogo"> Treat a Small Craft Advisory as NO-GO (otherwise CAUTION)</label>
+      <div class="sub">Thunderstorms and NWS marine warnings (gale, storm, special marine warning…) are always NO-GO.</div>
       <button id="blimReset">Reset to defaults</button>
     </details>
 
@@ -381,6 +393,7 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
       <li><b>Gusts</b> above the caution limit are a CAUTION and above the no-go limit are NO-GO.</li>
       <li><b>Thunderstorms</b> (⛈) are NO-GO. High CAPE (unstable air) is a CAUTION, since storms can pop up even when the hourly forecast shows none.</li>
       <li><b>Visibility</b> under 1 nm (fog) is a CAUTION.</li>
+      <li><b>NWS marine alerts</b> are checked for the station's marine forecast zone(s) and applied to the hours they cover. A Small Craft Advisory is a CAUTION (or NO-GO if you tick that in the limits), other advisories and watches are CAUTION, and any marine warning (gale, storm, special marine warning…) is NO-GO. Marine Weather Statements are shown for information only.</li>
       <li><b>Measured wind</b> on the card above comes from the tide station's sensor, where it has one (Boston does).</li>
       <li>Forecast from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>; tides from NOAA CO-OPS. Not a substitute for the NWS marine forecast and small craft advisories.</li>
     </ul>
@@ -395,14 +408,15 @@ table.wx { width:100%; border-collapse:separate; border-spacing:0; font-size:.86
 // ---------- Configured locations ----------
 const STATIONS = [
   // metar = nearest airport weather report, used to cross-check cloud ceiling.
-  { name: 'Wellfleet, MA',                         id: '8446613', lat: 41.9300, lon: -70.0417, tz: 'America/New_York', metar: 'KPVC' },
-  { name: 'Chatham, MA',                           id: '8447435', lat: 41.6811, lon: -69.9511, tz: 'America/New_York', metar: 'KCQX' },
-  { name: 'Bass River (Dennis/Yarmouth), MA',      id: '8447504', lat: 41.6500, lon: -70.1917, tz: 'America/New_York', metar: 'KHYA' },
-  { name: 'Provincetown, MA',                      id: '8446121', lat: 42.0480, lon: -70.1856, tz: 'America/New_York', metar: 'KPVC' },
-  { name: 'Scituate, MA',                          id: '8445138', lat: 42.1967, lon: -70.7200, tz: 'America/New_York', metar: 'KGHG' },
-  { name: "World's End (Hingham), MA",             id: '8444662', lat: 42.2610, lon: -70.8780, tz: 'America/New_York', metar: 'KBOS' },
-  { name: 'Boston, MA',                           id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York', metar: 'KBOS' },
-  { name: 'Acadia National Park (Bar Harbor), ME', id: '8413320', lat: 44.3917, lon: -68.2050, tz: 'America/New_York', metar: 'KBHB' },
+  // marine = NWS marine forecast zones checked for advisories on the Boat tab (first one is the main zone).
+  { name: 'Wellfleet, MA',                         id: '8446613', lat: 41.9300, lon: -70.0417, tz: 'America/New_York', metar: 'KPVC', marine: [['ANZ231', 'Cape Cod Bay']] },
+  { name: 'Chatham, MA',                           id: '8447435', lat: 41.6811, lon: -69.9511, tz: 'America/New_York', metar: 'KCQX', marine: [['ANZ232', 'Nantucket Sound'], ['ANZ254', 'Provincetown–Chatham–Nantucket coastal waters']] },
+  { name: 'Bass River (Dennis/Yarmouth), MA',      id: '8447504', lat: 41.6500, lon: -70.1917, tz: 'America/New_York', metar: 'KHYA', marine: [['ANZ232', 'Nantucket Sound']] },
+  { name: 'Provincetown, MA',                      id: '8446121', lat: 42.0480, lon: -70.1856, tz: 'America/New_York', metar: 'KPVC', marine: [['ANZ231', 'Cape Cod Bay'], ['ANZ254', 'Provincetown–Chatham–Nantucket coastal waters']] },
+  { name: 'Scituate, MA',                          id: '8445138', lat: 42.1967, lon: -70.7200, tz: 'America/New_York', metar: 'KGHG', marine: [['ANZ251', 'Massachusetts Bay']] },
+  { name: "World's End (Hingham), MA",             id: '8444662', lat: 42.2610, lon: -70.8780, tz: 'America/New_York', metar: 'KBOS', marine: [['ANZ230', 'Boston Harbor']] },
+  { name: 'Boston, MA',                           id: '8443970', lat: 42.3539, lon: -71.0503, tz: 'America/New_York', metar: 'KBOS', marine: [['ANZ230', 'Boston Harbor']] },
+  { name: 'Acadia National Park (Bar Harbor), ME', id: '8413320', lat: 44.3917, lon: -68.2050, tz: 'America/New_York', metar: 'KBHB', marine: [['ANZ052', 'Intra-coastal waters, Schoodic Pt–Stonington'], ['ANZ051', 'Coastal waters, Schoodic Pt–Stonington']] },
 ];
 
 // ---------- Drone flight limits ----------
@@ -1337,6 +1351,7 @@ const BOAT_DEFAULTS = {
   gustMax: 25,     // kt gusts → no-go
   hrs: 2,          // window is ± this many hours around each high tide
   popCaution: 40,  // % chance of precipitation → caution
+  scaNogo: false,  // treat a Small Craft Advisory as no-go instead of caution
 };
 const BOAT_FIXED = { visNm: 1, cape: 1000 };
 const BOAT = Object.assign({}, BOAT_DEFAULTS);
@@ -1354,19 +1369,94 @@ function loadBoatLimits() {
     const v = +saved[k];
     BOAT[k] = isFinite(v) && v >= lo && v <= hi ? v : BOAT_DEFAULTS[k];
   }
+  BOAT.scaNogo = !!saved.scaNogo;
 }
 function saveBoatLimits() {
   const o = {};
   for (const [k] of BOAT_FIELDS) o[k] = BOAT[k];
+  o.scaNogo = !!BOAT.scaNogo;
   store.set('boatLimits', o);
 }
 function renderBoatLimitsForm() {
   $('blimgrid').innerHTML = BOAT_FIELDS.map(([k, label, unit, lo, hi, step]) =>
     `<label class="lim"><span>${label}</span><span class="limin"><input type="number" inputmode="decimal" data-k="${k}" min="${lo}" max="${hi}" step="${step}" value="${BOAT[k]}"><span class="sub">${unit}</span></span></label>`).join('');
+  $('bScaNogo').checked = !!BOAT.scaNogo;
 }
 function boatLimitsChanged() {
   saveBoatLimits();
   if (state.mode === 'boat') { renderBoat(); renderBoatNow(); }
+}
+
+// ---------- Boat: NWS marine alerts (small craft advisory, gale warning, …) ----------
+const NWS_ALERTS = 'https://api.weather.gov/alerts/active';
+const marineCache = new Map();
+function getMarineAlerts(st) {
+  if (!st.marine || !st.marine.length) return Promise.resolve([]);
+  const hit = marineCache.get(st.id);
+  if (hit && Date.now() - hit.at < 10 * 60000) return hit.p; // refresh every 10 min
+  const zones = st.marine.map(z => z[0]).join(',');
+  const p = fetch(`${NWS_ALERTS}?zone=${zones}`)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(j => (j.features || []).map(f => f.properties || {})
+      .filter(a => a.status === 'Actual' && a.messageType !== 'Cancel' && a.event)
+      .map(a => {
+        const start = Date.parse(a.onset || a.effective), endIso = a.ends || a.expires;
+        const end = endIso ? Date.parse(endIso) : NaN;
+        return {
+          event: a.event, headline: a.headline || a.event, area: a.areaDesc || '',
+          desc: [a.description, a.instruction].filter(Boolean).join('\n\n'),
+          startMs: isFinite(start) ? start : 0, endMs: isFinite(end) ? end : Infinity,
+        };
+      }));
+  marineCache.set(st.id, { at: Date.now(), p });
+  p.catch(() => marineCache.delete(st.id));
+  return p;
+}
+// nogo: any marine warning; cau: advisories and watches (SCA can be set to nogo); info: statements.
+function alertLevel(a) {
+  const e = a.event.toLowerCase();
+  if (e.includes('small craft')) return BOAT.scaNogo ? 'nogo' : 'cau';
+  if (e.includes('statement') || e.includes('test')) return 'info';
+  if (e.includes('warning')) return 'nogo';
+  return 'cau';
+}
+// Attach the alerts that overlap each forecast hour (hour = utcMs ± 30 min, like the window segments).
+function attachMarine(hours, alerts) {
+  for (const h of hours) h.marine = !alerts || h.utcMs == null ? []
+    : alerts.filter(a => alertLevel(a) !== 'info' && h.utcMs + 30 * 60000 > a.startMs && h.utcMs - 30 * 60000 < a.endMs);
+}
+const isoLocal = (ms, tz) => { const p = tzParts(new Date(ms), tz); return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`; };
+function alertWhen(a, st) {
+  const now = stationNow(st.tz), nowMs = Date.now();
+  const f = ms => { const s = isoLocal(ms, st.tz); return (s.slice(0, 10) === now.date ? '' : WD[weekday(s.slice(0, 10))] + ' ') + fmtShort(s); };
+  const from = a.startMs > nowMs ? `from ${f(a.startMs)} ` : '';
+  return from + (a.endMs === Infinity ? 'until further notice' : `until ${f(a.endMs)}`);
+}
+function renderMarineBanner(st, alerts) {
+  const el = $('balerts');
+  if (!st.marine || !st.marine.length) { el.hidden = true; return; }
+  const link = `<a href="https://forecast.weather.gov/shmrn.php?mz=${st.marine[0][0].toLowerCase()}" target="_blank" rel="noopener">NWS marine forecast</a>`;
+  const names = st.marine.map(z => z[1]).join(' / ');
+  el.hidden = false;
+  if (alerts === null) {
+    el.className = 'mbanner cau';
+    el.innerHTML = `⚠️ Couldn't check NWS marine alerts right now. Check the ${link} for advisories before heading out.`;
+    return;
+  }
+  if (!alerts.length) {
+    el.className = 'mbanner ok';
+    el.innerHTML = `✓ No NWS marine advisories or warnings for ${esc(names)} · ${link}`;
+    return;
+  }
+  const rank = { nogo: 2, cau: 1, info: 0 };
+  const sorted = alerts.slice().sort((a, b) => rank[alertLevel(b)] - rank[alertLevel(a)]);
+  const top = alertLevel(sorted[0]);
+  el.className = 'mbanner ' + (top === 'info' ? '' : top);
+  el.innerHTML = sorted.map(a => {
+    const lv = alertLevel(a);
+    return `<details><summary><b class="ev ${lv}">${lv === 'info' ? 'ℹ️' : '⚠️'} ${esc(a.event)}</b> · ${esc(alertWhen(a, st))}<span class="sub"> · ${esc(a.area)}</span></summary>
+      <div class="desc">${esc(a.desc || a.headline)}</div></details>`;
+  }).join('') + `<div class="sub">From the National Weather Service · ${link}</div>`;
 }
 
 const shelterMsg = () => `wind ${BOAT.windGo}–${BOAT.windMax} kt: sheltered sites only`;
@@ -1386,6 +1476,7 @@ function boatStatus(h) {
   if (h.pop != null && h.pop >= BOAT.popCaution) cau.push(`≥${BOAT.popCaution}% rain chance`);
   const vnm = h.vis == null ? null : h.vis * MPH_TO_KT;
   if (vnm != null && vnm < BOAT_FIXED.visNm) cau.push('fog / visibility under 1 nm');
+  for (const a of h.marine || []) (alertLevel(a) === 'nogo' ? nogo : cau).push(a.event);
   return { level: nogo.length ? 'nogo' : cau.length ? 'cau' : 'go', nogo, cau, w, g, vnm };
 }
 // "SHELTERED" when moderate wind is the only concern.
@@ -1457,14 +1548,17 @@ async function renderBoat() {
   const tok = ++boatTok, st = station();
   $('blimits').textContent = `GO when: within ±${fmtH(BOAT.hrs)} of high tide, sunrise–sunset · wind ≤ ${BOAT.windGo} kt · gusts ≤ ${BOAT.gustCau} kt · no thunderstorms. SHELTERED with wind ${BOAT.windGo}–${BOAT.windMax} kt. CAUTION with gusts ${BOAT.gustCau}–${BOAT.gustMax} kt, ≥${BOAT.popCaution}% rain chance, unstable air or fog. NO-GO with wind > ${BOAT.windMax} kt, gusts > ${BOAT.gustMax} kt or any thunderstorm.`;
   const now = stationNow(st.tz);
-  let hours, hilo;
+  let hours, hilo, alerts;
   try {
-    [hours, hilo] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 8))]);
+    [hours, hilo, alerts] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 8)),
+      getMarineAlerts(st).catch(() => null)]); // null = couldn't check; shown as a warning, not as "all clear"
   } catch (err) {
     if (tok === boatTok) showError($('bwins'), err, renderBoat);
     return;
   }
   if (tok !== boatTok) return;
+  renderMarineBanner(st, alerts);
+  attachMarine(hours, alerts);
 
   const days = boatWindows(hours, hilo, st, tsMs(now.str));
   if (!days.some(d => d.day === state.bday)) state.bday = days[0].day;
@@ -1500,7 +1594,7 @@ async function renderBoat() {
 
   const dayInfo = days.find(d => d.day === state.bday);
   renderBoatDay(hours, hilo, dayInfo, now);
-  lastBoatPlan = boatPlanText(st, dayInfo, hours, hilo, now);
+  lastBoatPlan = boatPlanText(st, dayInfo, hours, hilo, now, alerts);
 }
 
 function renderBoatDay(hours, hilo, dayInfo, now) {
@@ -1583,7 +1677,7 @@ function renderBoatDay(hours, hilo, dayInfo, now) {
   }, { displayModeBar: false, responsive: true });
 }
 
-function boatPlanText(st, dayInfo, hours, hilo, now) {
+function boatPlanText(st, dayInfo, hours, hilo, now, alerts) {
   const day = dayInfo.day, [y, m, d] = parseIso(day);
   const hm = s => fmtShort('0000-00-00 ' + s);
   const span = p => `${fmtShort(msToStr(p.a))}–${fmtShort(msToStr(p.b))}`;
@@ -1602,6 +1696,9 @@ function boatPlanText(st, dayInfo, hours, hilo, now) {
     if (cau.length) L.push('Cautions: ' + cau.join(', '));
   }
   if (hours.some(h => h.t.startsWith(day) && isThunder(h))) L.push('THUNDERSTORMS forecast this day.');
+  if (alerts === null) L.push('NWS marine alerts: could not be checked.');
+  else if (alerts && alerts.length) L.push('NWS marine alerts: ' + alerts.map(a => `${a.event} ${alertWhen(a, st)}`).join('; '));
+  else if (st.marine) L.push(`NWS marine alerts: none for ${st.marine.map(z => z[1]).join(' / ')}.`);
   L.push(`Sunrise ${hm(dayInfo.sun.rise)}, sunset ${hm(dayInfo.sun.set)}`);
   L.push('Check the NWS marine forecast and small craft advisories before heading out.');
   L.push(`Generated ${fmtShort(now.str)} ${now.date} from Open-Meteo and NOAA CO-OPS forecasts.`);
@@ -1613,13 +1710,16 @@ let bnowTok = 0;
 async function renderBoatNow() {
   if (state.mode !== 'boat') return;
   const el = $('bnow'), tok = ++bnowTok, st = station(), now = stationNow(st.tz);
-  let hours, hilo, obs;
+  let hours, hilo, obs, alerts;
   try {
-    [hours, hilo, obs] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 2)), getObsWind(st)]);
+    [hours, hilo, obs, alerts] = await Promise.all([getWx(st), getHilo(st.id, addDays(now.date, -1), addDays(now.date, 2)), getObsWind(st),
+      getMarineAlerts(st).catch(() => null)]);
   } catch (err) { if (tok === bnowTok) el.innerHTML = `<span class="err" style="padding:0">Couldn't load forecast (${esc(err.message)}).</span>`; return; }
   if (tok !== bnowTok) return;
+  attachMarine(hours, alerts);
   const h = hours.find(x => x.t.startsWith(now.str.slice(0, 13)));
   if (!h) { el.innerHTML = '<span class="muted">No forecast for this hour.</span>'; return; }
+  const nowAlerts = (alerts || []).filter(a => alertLevel(a) !== 'info' && Date.now() >= a.startMs && Date.now() < a.endMs);
   const s = boatStatus(h), nowMs = tsMs(now.str), N = BOAT.hrs * 3600000;
   const highs = hilo.filter(isHigh);
   const cur = highs.find(H => Math.abs(tsMs(H.t) - nowMs) <= N);
@@ -1636,7 +1736,7 @@ async function renderBoatNow() {
   }
   const reasons = s.nogo.concat(s.cau);
   el.innerHTML = `
-    <div><div class="k">🚤 Weather now</div><span class="badge ${s.level}">${boatLabel(s.level, s.cau)}</span>${dark ? '<span class="badge off">DARK</span>' : cur ? '<span class="badge inw">HIGH TIDE</span>' : '<span class="badge off">OUTSIDE TIDE WINDOW</span>'}</div>
+    <div><div class="k">🚤 Weather now</div><span class="badge ${s.level}">${boatLabel(s.level, s.cau)}</span>${dark ? '<span class="badge off">DARK</span>' : cur ? '<span class="badge inw">HIGH TIDE</span>' : '<span class="badge off">OUTSIDE TIDE WINDOW</span>'}${nowAlerts.map(a => `<span class="badge ${alertLevel(a)}" style="font-size:.8rem;margin-left:4px">${esc(a.event.toUpperCase())}</span>`).join('')}</div>
     <div class="why">
       <div>Wind ${r0(s.w)} kt ${compass(h.d10)} · gust ${r0(s.g)} kt${isThunder(h) ? ' · ⛈' : ''}${meas}</div>
       ${reasons.length ? `<div class="sub">${esc(reasons.join(' · '))}</div>` : ''}
@@ -1808,6 +1908,7 @@ function init() {
     BOAT[f[0]] = v;
     boatLimitsChanged();
   };
+  $('bScaNogo').onchange = e => { BOAT.scaNogo = e.target.checked; boatLimitsChanged(); };
   $('blimReset').onclick = () => { Object.assign(BOAT, BOAT_DEFAULTS); renderBoatLimitsForm(); boatLimitsChanged(); };
   $('bcopyPlan').onclick = () => {
     const b = $('bcopyPlan'), label = '📋 Copy plan for this day';
